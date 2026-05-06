@@ -247,6 +247,10 @@
         <div class="admin-section">
           <h2>Staff Vacation Allotments</h2>
           <div id="staff-list"></div>
+          <div style="margin-top:18px;display:flex;align-items:center;gap:12px;">
+            <button class="btn btn-primary" style="width:auto;" onclick="saveAllStaff()">Save All</button>
+            <span id="staff-save-msg" style="font-size:0.82rem;color:var(--accent);"></span>
+          </div>
         </div>
         <div class="admin-section">
           <h2>Change Passwords</h2>
@@ -389,9 +393,10 @@ async function doAdminLogin() {
   }
 }
 
-function showAdminPanel() {
+async function showAdminPanel() {
   $('admin-locked').classList.add('hidden');
   $('admin-panel').classList.remove('hidden');
+  await loadAll();
   renderStaffAdmin();
 }
 
@@ -676,22 +681,27 @@ function renderStaffAdmin() {
       <div class="form-group" style="margin:0;">
         <input type="number" id="days-${s.id}" value="${s.vacation_days}" min="0" max="365" step="1">
       </div>
-      <button class="btn btn-ghost btn-sm" onclick="saveStaff(${s.id})">Save</button>
     </div>
   `).join('');
 }
 
-async function saveStaff(id) {
-  const days = parseInt($(`days-${id}`).value);
-  const color = $(`color-${id}`).value;
-  const r = await fetch(`/api/staff/${id}`, {
-    method: 'PUT',
-    headers: {'Content-Type':'application/json'},
-    body: JSON.stringify({ vacation_days: days, color })
+async function saveAllStaff() {
+  const saves = staffList.map(s => {
+    const days = parseInt($(`days-${s.id}`).value);
+    const color = $(`color-${s.id}`).value;
+    return fetch(`/api/staff/${s.id}`, {
+      method: 'PUT',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ vacation_days: days, color })
+    });
   });
-  if (r.ok) {
+  const results = await Promise.all(saves);
+  if (results.every(r => r.ok)) {
     await loadAll();
     renderStaffAdmin();
+    const msg = $('staff-save-msg');
+    msg.textContent = 'All saved.';
+    setTimeout(() => msg.textContent = '', 2500);
   }
 }
 
