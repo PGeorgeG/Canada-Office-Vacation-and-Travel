@@ -208,8 +208,8 @@
     <h1>📅 PTS Staff Vacation Planner</h1>
     <nav>
       <button onclick="showTab('calendar')" id="tab-calendar" class="active">Calendar</button>
-      <button onclick="showTab('list')" id="tab-list">Travel Summary</button>
-      <button onclick="showTab('holidays')" id="tab-holidays">Holidays</button>
+      <button onclick="showTab('list')" id="tab-list">Summaries</button>
+      <button onclick="showTab('holidays')" id="tab-holidays">Stat Holidays</button>
       <button onclick="showTab('admin')" id="tab-admin">Admin</button>
     </nav>
     <button class="btn btn-ghost btn-sm" onclick="doLogout()">Sign out</button>
@@ -623,7 +623,7 @@ function renderCalendar() {
   }
 }
 
-// ── Travel Summary view ───────────────────────────────────────────────────────
+// ── Summaries view ───────────────────────────────────────────────────────
 const SUMMARY_CATS = ['Vacation', 'Lieu Day', 'Conference / Training', 'Travel (work)', 'Other'];
 
 function countWorkdays(startDate, endDate) {
