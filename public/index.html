@@ -229,12 +229,9 @@
       <div class="calendar-grid" id="calendar-grid"></div>
     </div>
 
-    <!-- ── LIST TAB ── -->
+    <!-- ── TRAVEL SUMMARY TAB ── -->
     <div id="tab-list-content" class="hidden">
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;">
-        <div style="display:flex;gap:8px;flex-wrap:wrap;" id="list-filters"></div>
-      </div>
-      <div class="entries-list" id="entries-list"></div>
+      <div id="travel-summary"></div>
     </div>
 
     <!-- ── ADMIN TAB ── -->
@@ -626,38 +623,97 @@ function renderCalendar() {
   }
 }
 
-// ── List view ─────────────────────────────────────────────────────────────────
+// ── Travel Summary view ───────────────────────────────────────────────────────
+const SUMMARY_CATS = ['Vacation', 'Lieu Day', 'Conference / Training', 'Travel (work)', 'Other'];
+
+function countWorkdays(startDate, endDate) {
+  const s = new Date(startDate + 'T00:00:00');
+  const e = new Date(endDate + 'T00:00:00');
+  let count = 0;
+  const cur = new Date(s);
+  while (cur <= e) {
+    const d = cur.getDay();
+    const ds = cur.toISOString().slice(0, 10);
+    if (d >= 1 && d <= 4 && !holidayMap[ds]) count++;
+    cur.setDate(cur.getDate() + 1);
+  }
+  return count;
+}
+
 function renderList() {
-  // Filter buttons
-  const filters = $('list-filters');
-  filters.innerHTML = `<button class="btn btn-sm ${!listFilter ? 'btn-primary' : 'btn-ghost'}" onclick="setFilter(null)">All</button>` +
-    staffList.map(s =>
-      `<button class="btn btn-sm ${listFilter === s.id ? 'btn-primary' : 'btn-ghost'}" onclick="setFilter(${s.id})" style="${listFilter===s.id?`background:${s.color};`:''}">${s.name}</button>`
-    ).join('');
-
-  const filtered = listFilter ? allEntries.filter(e => e.staff_id === listFilter) : allEntries;
-  const list = $('entries-list');
-
-  if (!filtered.length) {
-    list.innerHTML = `<p style="color:var(--muted);text-align:center;padding:40px;">No entries for ${currentYear}.</p>`;
+  const el = $('travel-summary');
+  if (!allEntries.length) {
+    el.innerHTML = `<p style="color:var(--muted);text-align:center;padding:40px;">No entries for ${currentYear}.</p>`;
     return;
   }
 
-  list.innerHTML = filtered.map(e => {
-    const label = e.category === 'Other' && e.other_label ? `Other: ${e.other_label}` : e.category;
-    const same = e.start_date === e.end_date;
-    const dates = same ? fmtFull(e.start_date) : `${fmt(e.start_date)} – ${fmt(e.end_date)}`;
-    return `
-      <div class="entry-row">
-        <div class="swatch" style="background:${e.color}"></div>
-        <div class="info">
-          <div class="who">${e.staff_name}</div>
-          <div class="what">${catEmoji(e.category)} ${label}${e.notes ? ' · ' + e.notes : ''}</div>
-        </div>
-        <div class="dates">${dates}</div>
-        <button class="btn btn-ghost btn-sm" onclick="editEntry(${e.id})">Edit</button>
-      </div>`;
+  // Build per-person sections
+  const html = staffList.map(s => {
+    const personEntries = allEntries.filter(e => e.staff_id === s.id);
+    if (!personEntries.length) return '';
+
+    // Group by category
+    const byCat = {};
+    SUMMARY_CATS.forEach(c => byCat[c] = []);
+    personEntries.forEach(e => {
+      const key = SUMMARY_CATS.includes(e.category) ? e.category : 'Other';
+      byCat[key].push(e);
+    });
+
+    // Totals (excluding Sick Days)
+    const totals = {};
+    SUMMARY_CATS.forEach(c => {
+      totals[c] = byCat[c].reduce((sum, e) => sum + countWorkdays(e.start_date, e.end_date), 0);
+    });
+
+    // Rows grouped by category
+    const catRows = SUMMARY_CATS.map(cat => {
+      if (!byCat[cat].length) return '';
+      const entryRows = byCat[cat].map(e => {
+        const same = e.start_date === e.end_date;
+        const dates = same ? fmtFull(e.start_date) : `${fmt(e.start_date)} – ${fmt(e.end_date)}`;
+        const days = countWorkdays(e.start_date, e.end_date);
+        const label = cat === 'Other' && e.other_label ? e.other_label : '';
+        return `<tr>
+          <td style="padding:8px 16px 8px 32px;border-bottom:1px solid var(--border);color:var(--muted);font-size:0.85rem;">${dates}</td>
+          <td style="padding:8px 16px;border-bottom:1px solid var(--border);color:var(--muted);font-size:0.85rem;">${label}</td>
+          <td style="padding:8px 16px;border-bottom:1px solid var(--border);color:var(--muted);font-size:0.85rem;text-align:right;">${days}d</td>
+          <td style="padding:8px 16px;border-bottom:1px solid var(--border);text-align:right;">
+            <button class="btn btn-ghost btn-sm" onclick="editEntry(${e.id})">Edit</button>
+          </td>
+        </tr>`;
+      }).join('');
+
+      return `<tr style="background:var(--bg);">
+          <td colspan="4" style="padding:8px 16px;border-bottom:1px solid var(--border);font-size:0.78rem;font-weight:700;text-transform:uppercase;letter-spacing:0.04em;color:var(--muted);">
+            ${catEmoji(cat)} ${cat} <span style="font-weight:400;margin-left:6px;">${totals[cat]}d total</span>
+          </td>
+        </tr>
+        ${entryRows}`;
+    }).join('');
+
+    // Grand totals footer row
+    const totalParts = SUMMARY_CATS
+      .filter(c => totals[c] > 0)
+      .map(c => `${c}: ${totals[c]}d`)
+      .join(' · ');
+
+    return `<div class="admin-section" style="padding:0;overflow:hidden;margin-bottom:20px;">
+      <div style="display:flex;align-items:center;gap:10px;padding:14px 16px;border-bottom:2px solid var(--border);background:var(--bg);">
+        <div style="width:12px;height:12px;border-radius:50%;background:${s.color};flex-shrink:0;"></div>
+        <span style="font-weight:700;font-size:1rem;">${s.name}</span>
+      </div>
+      <table style="width:100%;border-collapse:collapse;">
+        ${catRows}
+        <tr style="background:#f7f4ef;">
+          <td colspan="2" style="padding:10px 16px;font-size:0.82rem;color:var(--muted);">${totalParts}</td>
+          <td colspan="2"></td>
+        </tr>
+      </table>
+    </div>`;
   }).join('');
+
+  el.innerHTML = html || `<p style="color:var(--muted);text-align:center;padding:40px;">No entries for ${currentYear}.</p>`;
 }
 
 function setFilter(id) {
