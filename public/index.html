@@ -205,6 +205,7 @@
       <button onclick="showTab('list')" id="tab-list">Summaries</button>
       <button onclick="showTab('admin')" id="tab-admin">Admin &amp; Stats</button>
     </nav>
+    <a href="/calendar.ics" target="_blank" class="btn btn-ghost btn-sm" title="Subscribe in Google Calendar">📅 iCal</a>
     <button class="btn btn-ghost btn-sm" onclick="doLogout()">Sign out</button>
   </header>
 
@@ -838,7 +839,10 @@ async function deleteEntry() {
 
 // ── Admin panel ───────────────────────────────────────────────────────────────
 function renderStaffAdmin() {
-  $('staff-list').innerHTML = staffList.map(s => `
+  const base = window.location.origin;
+  $('staff-list').innerHTML = staffList.map(s => {
+    const url = `${base}/calendar.ics?person=${encodeURIComponent(s.name)}`;
+    return `
     <div class="staff-row">
       <div class="swatch-pick" style="background:${s.color}">
         <input type="color" value="${s.color}" id="color-${s.id}" onchange="document.getElementById('color-${s.id}').parentElement.style.background=this.value">
@@ -847,8 +851,21 @@ function renderStaffAdmin() {
       <div class="form-group" style="margin:0;">
         <input type="number" id="days-${s.id}" value="${s.vacation_days}" min="0" max="365" step="1">
       </div>
-    </div>
-  `).join('');
+      <div style="display:flex;align-items:center;gap:6px;flex-shrink:0;">
+        <a href="${url}" target="_blank" style="font-size:0.78rem;color:var(--accent);text-decoration:none;white-space:nowrap;">iCal feed</a>
+        <button onclick="copyIcalUrl('${url}', this)" style="background:none;border:none;cursor:pointer;padding:2px 4px;color:var(--muted);font-size:0.9rem;" title="Copy URL">⎘</button>
+        <span id="copy-msg-${s.id}" style="font-size:0.75rem;color:var(--accent);opacity:0;transition:opacity 0.3s;">Copied!</span>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function copyIcalUrl(url, btn) {
+  navigator.clipboard.writeText(url).then(() => {
+    const msg = btn.nextElementSibling;
+    msg.style.opacity = '1';
+    setTimeout(() => msg.style.opacity = '0', 2000);
+  });
 }
 
 async function saveAllStaff() {
