@@ -207,6 +207,65 @@ app.delete('/api/holidays/group/:groupId', requireAuth, requireAdmin, (req, res)
   res.json({ ok: true });
 });
 
+// ── iCal feed ─────────────────────────────────────────────────────────────────
+// No auth required — Google Calendar subscribes via URL
+// Full feed:     https://your-app.railway.app/calendar.ics
+// Per person:    https://your-app.railway.app/calendar.ics?person=Dave
+
+app.get('/calendar.ics', (req, res) => {
+  const { person } = req.query;
+  let sql = 'SELECT e.*,s.name as staff_name FROM entries e JOIN staff s ON e.staff_id=s.id';
+  const params = [];
+  if (person) { sql += ' WHERE s.name=?'; params.push(person); }
+  sql += ' ORDER BY e.start_date';
+  const entries = getAll(sql, params);
+
+  function icalDate(ds) { return ds.replace(/-/g, ''); }
+  function icalDateNext(ds) {
+    const d = new Date(ds + 'T00:00:00');
+    d.setDate(d.getDate() + 1);
+    return d.toISOString().slice(0,10).replace(/-/g,'');
+  }
+  function esc(str) { return (str || '').replace(/[;,]/g, s => '\\' + s); }
+
+  const now = new Date().toISOString().replace(/[-:.Z]/g,'').slice(0,15) + 'Z';
+  const calName = person ? 'PTS Canada OOO \u2014 ' + person : 'PTS Canada Out of Office';
+  const CRLF = '\r\n';
+
+  const events = entries.map(e => {
+    const label = (e.category === 'Other' && e.other_label)
+      ? e.staff_name + ': ' + e.other_label
+      : e.staff_name + ': ' + e.category;
+    const lines = [
+      'BEGIN:VEVENT',
+      'UID:pts-ooo-' + e.id + '@canada.pts',
+      'DTSTAMP:' + now,
+      'DTSTART;VALUE=DATE:' + icalDate(e.start_date),
+      'DTEND;VALUE=DATE:' + icalDateNext(e.end_date),
+      'SUMMARY:' + esc(label),
+      'END:VEVENT'
+    ];
+    if (e.notes) lines.splice(-1, 0, 'DESCRIPTION:' + esc(e.notes));
+    return lines.join(CRLF);
+  });
+
+  const ical = [
+    'BEGIN:VCALENDAR',
+    'VERSION:2.0',
+    'PRODID:-//PTS Canada//Out of Office Planner//EN',
+    'X-WR-CALNAME:' + calName,
+    'X-WR-TIMEZONE:America/Vancouver',
+    'CALSCALE:GREGORIAN',
+    'METHOD:PUBLISH',
+    ...events,
+    'END:VCALENDAR'
+  ].join(CRLF);
+
+  res.setHeader('Content-Type', 'text/calendar; charset=utf-8');
+  res.setHeader('Content-Disposition', 'inline; filename="pts-ooo.ics"');
+  res.send(ical);
+});
+
 // ── Boot ──────────────────────────────────────────────────────────────────────
 initDb().then(() => {
   app.listen(PORT, () => console.log(`PTS Canada Out of Office Planner running on port ${PORT}`));
