@@ -296,15 +296,9 @@
       </div>
     <!-- ── HOLIDAYS TAB ── -->
     <div id="tab-holidays-content" class="hidden">
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:24px;flex-wrap:wrap;gap:12px;">
-        <div>
-          <h2 style="font-size:1.1rem;font-weight:700;">Office Holiday Schedule</h2>
-          <p style="font-size:0.85rem;color:var(--muted);margin-top:4px;">Statutory and office holidays — these days are greyed out on the calendar.</p>
-        </div>
-        <div style="display:flex;gap:8px;">
-          <select id="holiday-year-filter" onchange="renderHolidaysTab()" style="padding:7px 12px;border:1px solid var(--border);border-radius:var(--radius);font-size:0.875rem;background:var(--bg);">
-          </select>
-        </div>
+      <div style="margin-bottom:24px;">
+        <h2 style="font-size:1.1rem;font-weight:700;">Office Holiday Schedule</h2>
+        <p style="font-size:0.85rem;color:var(--muted);margin-top:4px;">Statutory and office holidays — these days are greyed out on the calendar.</p>
       </div>
       <div class="admin-section" style="padding:0;overflow:hidden;">
         <table style="width:100%;border-collapse:collapse;font-size:0.9rem;">
@@ -922,33 +916,8 @@ async function deleteHolidayGroup(groupId) {
 
 // ── Holidays tab ──────────────────────────────────────────────────────────────
 async function renderHolidaysTab() {
-  const groups = await fetch('/api/holidays/grouped').then(r => r.json());
   const body = $('holidays-tab-body');
-  const yearSel = $('holiday-year-filter');
-
-  // Rebuild year filter options every time so new years appear automatically
-  const allYears = [...new Set(groups.flatMap(g => g.dates.map(d => d.slice(0,4))))].sort();
-  const prevVal = yearSel.value;
-  yearSel.innerHTML = '';
-  allYears.forEach(y => {
-    const o = document.createElement('option');
-    o.value = y; o.textContent = y;
-    yearSel.appendChild(o);
-  });
-  // Restore previous selection, or default to current year, or first available
-  if (prevVal && allYears.includes(prevVal)) yearSel.value = prevVal;
-  else if (allYears.includes(String(currentYear))) yearSel.value = String(currentYear);
-  else if (allYears.length) yearSel.value = allYears[0];
-
-  const filterYear = yearSel.value;
-  const filtered = filterYear
-    ? groups.filter(g => g.dates.some(d => d.startsWith(filterYear)))
-    : groups;
-
-  if (!filtered.length) {
-    body.innerHTML = '<tr><td colspan="2" style="padding:40px;text-align:center;color:var(--muted);">No holidays for this year. Add them in the Admin tab.</td></tr>';
-    return;
-  }
+  if (!body) return; // tab not in DOM yet
 
   const DOW = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
   const MONTH = ['January','February','March','April','May','June','July','August','September','October','November','December'];
@@ -958,7 +927,22 @@ async function renderHolidaysTab() {
     return `${DOW[d.getDay()]}, ${MONTH[d.getMonth()]} ${d.getDate()}, ${d.getFullYear()}`;
   }
 
-  body.innerHTML = filtered.map((g, i) => {
+  let groups;
+  try {
+    const r = await fetch('/api/holidays/grouped');
+    if (!r.ok) { body.innerHTML = '<tr><td colspan="2" style="padding:40px;text-align:center;color:var(--muted);">Could not load holidays.</td></tr>'; return; }
+    groups = await r.json();
+  } catch(e) {
+    body.innerHTML = '<tr><td colspan="2" style="padding:40px;text-align:center;color:var(--muted);">Could not load holidays.</td></tr>';
+    return;
+  }
+
+  if (!groups.length) {
+    body.innerHTML = '<tr><td colspan="2" style="padding:40px;text-align:center;color:var(--muted);">No holidays added yet. Add them in the Admin tab.</td></tr>';
+    return;
+  }
+
+  body.innerHTML = groups.map((g, i) => {
     const bg = i % 2 === 1 ? 'background:#fdf9f5;' : '';
     let dateCell;
     if (g.dates.length === 1) {
