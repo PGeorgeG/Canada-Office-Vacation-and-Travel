@@ -705,9 +705,9 @@ function renderList() {
         <div style="width:12px;height:12px;border-radius:50%;background:${s.color};flex-shrink:0;"></div>
         <span style="font-weight:700;font-size:1rem;flex:1;">${s.name}</span>
         <span style="font-size:0.8rem;color:var(--muted);">${totalParts}</span>
-        <span id="${uid}-chevron" style="color:var(--muted);font-size:0.85rem;margin-left:8px;">▼</span>
+        <span id="${uid}-chevron" style="color:var(--muted);font-size:0.85rem;margin-left:8px;">▶</span>
       </div>
-      <div id="${uid}" style="border-top:2px solid var(--border);">
+      <div id="${uid}" style="border-top:2px solid var(--border);display:none;">
         <table style="width:100%;border-collapse:collapse;">
           ${catRows}
         </table>
