@@ -851,9 +851,8 @@ function renderStaffAdmin() {
       <div class="form-group" style="margin:0;">
         <input type="number" id="days-${s.id}" value="${s.vacation_days}" min="0" max="365" step="1">
       </div>
-      <div style="display:flex;align-items:center;gap:6px;flex-shrink:0;">
-        <span style="font-size:0.75rem;color:var(--muted);font-family:monospace;background:var(--bg);border:1px solid var(--border);border-radius:4px;padding:2px 6px;white-space:nowrap;overflow:hidden;max-width:220px;text-overflow:ellipsis;">${url}</span>
-        <button onclick="copyIcalUrl('${url}', this)" style="background:none;border:none;cursor:pointer;padding:2px 4px;color:var(--muted);font-size:0.9rem;" title="Copy URL">⎘</button>
+      <div style="display:flex;align-items:center;gap:8px;flex-shrink:0;">
+        <button onclick="copyIcalUrl('${url}', this)" style="background:none;border:none;cursor:pointer;padding:0;color:var(--accent);font-size:0.82rem;text-decoration:underline;" title="${url}">Link for Calendar</button>
         <span id="copy-msg-${s.id}" style="font-size:0.75rem;color:var(--accent);opacity:0;transition:opacity 0.3s;">Copied!</span>
       </div>
     </div>`;
