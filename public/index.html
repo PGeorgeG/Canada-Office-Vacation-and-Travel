@@ -170,13 +170,7 @@
 
   .hidden { display: none !important; }
 
-  /* Category colours in chips */
-  .cat-vacation     { background: #4f86c6; }
-  .cat-lieu         { background: #7f8c8d; }
-  .cat-conference   { background: #8e44ad; }
-  .cat-travel       { background: #d35400; }
-  .cat-sick         { background: #27ae60; }
-  .cat-other        { background: #c0392b; }
+  /* Category shading handled via catShade() inline styles */
 
   .holiday-add-grid { grid-template-columns: 1fr !important; }
   @media (max-width: 700px) {
@@ -387,6 +381,31 @@ function catAbbr(cat) {
   return map[cat] || 'othr';
 }
 
+// Blend hex colour toward white by a given amount (0 = original, 1 = white)
+function blendToWhite(hex, amount) {
+  const r = parseInt(hex.slice(1,3), 16);
+  const g = parseInt(hex.slice(3,5), 16);
+  const b = parseInt(hex.slice(5,7), 16);
+  const nr = Math.round(r + (255 - r) * amount);
+  const ng = Math.round(g + (255 - g) * amount);
+  const nb = Math.round(b + (255 - b) * amount);
+  return `rgb(${nr},${ng},${nb})`;
+}
+
+// Return the shade of a person's colour based on category
+function catShade(hex, cat) {
+  const shades = {
+    'Vacation':             0.00,  // full colour
+    'Travel (work)':        0.40,  // medium
+    'Conference / Training':0.50,  // medium-light
+    'Lieu Day':             0.62,  // light
+    'Sick Day':             0.72,  // lighter
+    'Other':                0.78,  // lightest
+  };
+  const amount = shades[cat] ?? 0.60;
+  return blendToWhite(hex, amount);
+}
+
 // ── Auth ──────────────────────────────────────────────────────────────────────
 async function init() {
   const s = await fetch('/api/session').then(r => r.json());
@@ -560,10 +579,13 @@ function renderCalendar() {
       const isNonWorkday = isWeekend || isFriday || !!holidayName;
 
       const chips = dayEntries.map(e => {
-        // Grey out chip if this day is a Fri/Sat/Sun or stat holiday
+        const shade = catShade(e.color, e.category);
+        // Vacation (full colour) gets white text; lighter shades get dark text
+        const shadeAmt = {'Vacation':0,'Travel (work)':0.40,'Conference / Training':0.50,'Lieu Day':0.62,'Sick Day':0.72,'Other':0.78}[e.category] ?? 0.60;
+        const textColor = shadeAmt < 0.45 ? '#fff' : '#3a3028';
         const chipStyle = isNonWorkday
-          ? `background:${e.color};opacity:0.35;`
-          : `background:${e.color};`;
+          ? `background:${shade};color:${textColor};opacity:0.4;`
+          : `background:${shade};color:${textColor};`;
         return `<span class="entry-chip" style="${chipStyle}"
           onclick="editEntry(${e.id});event.stopPropagation()" title="${e.staff_name}: ${e.category}${isNonWorkday ? ' (non-workday)' : ''}">${e.staff_name}: ${catAbbr(e.category)}</span>`;
       }).join('');
