@@ -209,8 +209,7 @@
     <nav>
       <button onclick="showTab('calendar')" id="tab-calendar" class="active">Calendar</button>
       <button onclick="showTab('list')" id="tab-list">Summaries</button>
-      <button onclick="showTab('holidays')" id="tab-holidays">Stat Holidays</button>
-      <button onclick="showTab('admin')" id="tab-admin">Admin</button>
+      <button onclick="showTab('admin')" id="tab-admin">Admin &amp; Stats</button>
     </nav>
     <button class="btn btn-ghost btn-sm" onclick="doLogout()">Sign out</button>
   </header>
@@ -293,27 +292,7 @@
           </div>
           <div class="error-msg" id="pw-msg" style="color:var(--accent);"></div>
         </div>
-      </div>
-    <!-- ── HOLIDAYS TAB ── -->
-    <div id="tab-holidays-content" class="hidden">
-      <div style="margin-bottom:24px;">
-        <h2 style="font-size:1.1rem;font-weight:700;">Office Holiday Schedule</h2>
-        <p style="font-size:0.85rem;color:var(--muted);margin-top:4px;">Statutory and office holidays — these days are greyed out on the calendar.</p>
-      </div>
-      <div class="admin-section" style="padding:0;overflow:hidden;">
-        <table style="width:100%;border-collapse:collapse;font-size:0.9rem;">
-          <thead>
-            <tr style="background:var(--bg);">
-              <th style="text-align:left;padding:12px 20px;font-size:0.78rem;text-transform:uppercase;letter-spacing:0.04em;color:var(--muted);border-bottom:1px solid var(--border);width:40%;">Holiday</th>
-              <th style="text-align:left;padding:12px 20px;font-size:0.78rem;text-transform:uppercase;letter-spacing:0.04em;color:var(--muted);border-bottom:1px solid var(--border);">Date(s)</th>
-            </tr>
-          </thead>
-          <tbody id="holidays-tab-body">
-            <tr><td colspan="2" style="padding:40px;text-align:center;color:var(--muted);">No holidays loaded yet. Add them in the Admin tab.</td></tr>
-          </tbody>
-        </table>
-      </div>
-    </div>
+      </div></div>
   </main>
 </div>
 
@@ -478,12 +457,11 @@ async function reloadEntries() {
 
 // ── Tabs ──────────────────────────────────────────────────────────────────────
 function showTab(name) {
-  ['calendar','list','admin','holidays'].forEach(t => {
+  ['calendar','list','admin'].forEach(t => {
     $(`tab-${t}-content`).classList.toggle('hidden', t !== name);
     $(`tab-${t}`).classList.toggle('active', t === name);
   });
-  $('fab').classList.toggle('hidden', name === 'admin' || name === 'holidays');
-  if (name === 'holidays') renderHolidaysTab();
+  $('fab').classList.toggle('hidden', name === 'admin');
 }
 
 function changeYear(delta) {
