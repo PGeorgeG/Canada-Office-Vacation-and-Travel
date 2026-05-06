@@ -118,7 +118,9 @@ app.get('/api/summary/:year', requireAuth, (req, res) => {
     const breakdown = {};
     ALL_CATS.forEach(c => breakdown[c] = 0);
     entries.forEach(e => {
-      const days = workdaysBetween(e.start_date, e.end_date, year, statDays);
+      const days = e.category === 'Travel (work)'
+        ? calendarDays(e.start_date, e.end_date, year)
+        : workdaysBetween(e.start_date, e.end_date, year, statDays);
       const key = ALL_CATS.includes(e.category) ? e.category : 'Other';
       breakdown[key] += days;
     });
@@ -145,6 +147,17 @@ function workdaysBetween(start, end, year, statDays = new Set()) {
     cur.setDate(cur.getDate() + 1);
   }
   return count;
+}
+
+// Count all calendar days (for Travel) clamped to year
+function calendarDays(start, end, year) {
+  const s = new Date(start + 'T00:00:00');
+  const e = new Date(end + 'T00:00:00');
+  const yS = new Date(`${year}-01-01T00:00:00`);
+  const yE = new Date(`${year}-12-31T00:00:00`);
+  const from = s < yS ? yS : s;
+  const to   = e > yE ? yE : e;
+  return Math.max(0, Math.round((to - from) / 86400000) + 1);
 }
 
 // ── Holidays ──────────────────────────────────────────────────────────────────
@@ -196,7 +209,7 @@ app.delete('/api/holidays/group/:groupId', requireAuth, requireAdmin, (req, res)
 
 // ── Boot ──────────────────────────────────────────────────────────────────────
 initDb().then(() => {
-  app.listen(PORT, () => console.log(`PTS Vacation Planner running on port ${PORT}`));
+  app.listen(PORT, () => console.log(`PTS Canada Out of Office Planner running on port ${PORT}`));
 }).catch(err => {
   console.error('DB init failed:', err);
   process.exit(1);
