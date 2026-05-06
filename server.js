@@ -106,6 +106,10 @@ app.get('/api/summary/:year', requireAuth, (req, res) => {
   const staff = getAll("SELECT * FROM staff WHERE active=1 ORDER BY id");
   const ALL_CATS = ['Vacation','Lieu Day','Conference / Training','Travel (work)','Sick Day','Other'];
 
+  // Build stat holiday set for fast lookup
+  const holidays = getAll("SELECT date FROM holidays");
+  const statDays = new Set(holidays.map(h => h.date));
+
   const summary = staff.map(s => {
     const entries = getAll(
       `SELECT * FROM entries WHERE staff_id=? AND (substr(start_date,1,4)=? OR substr(end_date,1,4)=?)`,
@@ -114,7 +118,7 @@ app.get('/api/summary/:year', requireAuth, (req, res) => {
     const breakdown = {};
     ALL_CATS.forEach(c => breakdown[c] = 0);
     entries.forEach(e => {
-      const days = workdaysBetween(e.start_date, e.end_date, year);
+      const days = workdaysBetween(e.start_date, e.end_date, year, statDays);
       const key = ALL_CATS.includes(e.category) ? e.category : 'Other';
       breakdown[key] += days;
     });
@@ -125,7 +129,7 @@ app.get('/api/summary/:year', requireAuth, (req, res) => {
   res.json(summary);
 });
 
-function workdaysBetween(start, end, year) {
+function workdaysBetween(start, end, year, statDays = new Set()) {
   const s = new Date(start + 'T00:00:00');
   const e = new Date(end + 'T00:00:00');
   const yS = new Date(`${year}-01-01T00:00:00`);
@@ -136,7 +140,8 @@ function workdaysBetween(start, end, year) {
   const cur = new Date(from);
   while (cur <= to) {
     const d = cur.getDay();
-    if (d >= 1 && d <= 4) count++; // Mon–Thu only (Fridays off)
+    const ds = cur.toISOString().slice(0, 10);
+    if (d >= 1 && d <= 4 && !statDays.has(ds)) count++; // Mon–Thu, not a stat holiday
     cur.setDate(cur.getDate() + 1);
   }
   return count;
