@@ -847,17 +847,23 @@ async function deleteHolidayGroup(groupId) {
 async function renderHolidaysTab() {
   const groups = await fetch('/api/holidays/grouped').then(r => r.json());
   const body = $('holidays-tab-body');
-
-  // Populate year filter
   const yearSel = $('holiday-year-filter');
-  const allYears = [...new Set(groups.flatMap(g => g.dates.map(d => d.slice(0,4))))].sort();
-  if (allYears.length && !yearSel.options.length) {
-    allYears.forEach(y => { const o = document.createElement('option'); o.value = y; o.textContent = y; yearSel.appendChild(o); });
-    // Default to current year if present
-    if (allYears.includes(String(currentYear))) yearSel.value = String(currentYear);
-  }
-  const filterYear = yearSel.value;
 
+  // Rebuild year filter options every time so new years appear automatically
+  const allYears = [...new Set(groups.flatMap(g => g.dates.map(d => d.slice(0,4))))].sort();
+  const prevVal = yearSel.value;
+  yearSel.innerHTML = '';
+  allYears.forEach(y => {
+    const o = document.createElement('option');
+    o.value = y; o.textContent = y;
+    yearSel.appendChild(o);
+  });
+  // Restore previous selection, or default to current year, or first available
+  if (prevVal && allYears.includes(prevVal)) yearSel.value = prevVal;
+  else if (allYears.includes(String(currentYear))) yearSel.value = String(currentYear);
+  else if (allYears.length) yearSel.value = allYears[0];
+
+  const filterYear = yearSel.value;
   const filtered = filterYear
     ? groups.filter(g => g.dates.some(d => d.startsWith(filterYear)))
     : groups;
@@ -881,18 +887,15 @@ async function renderHolidaysTab() {
     if (g.dates.length === 1) {
       dateCell = fmtHolDate(g.dates[0]);
     } else {
-      // Check if contiguous range
-      const first = g.dates[0], last = g.dates[g.dates.length-1];
-      const span = Math.round((new Date(last+'T00:00:00') - new Date(first+'T00:00:00')) / 86400000) + 1;
-      if (span === g.dates.length) {
-        dateCell = `${fmtHolDate(first)} – ${fmtHolDate(last)}`;
-      } else {
-        dateCell = g.dates.map(fmtHolDate).join('<br>');
-      }
+      const first = g.dates[0], last = g.dates[g.dates.length - 1];
+      const span = Math.round((new Date(last + 'T00:00:00') - new Date(first + 'T00:00:00')) / 86400000) + 1;
+      dateCell = span === g.dates.length
+        ? `${fmtHolDate(first)} – ${fmtHolDate(last)}`
+        : g.dates.map(fmtHolDate).join('<br>');
     }
     return `<tr style="${bg}">
       <td style="padding:14px 20px;border-bottom:1px solid var(--border);font-weight:600;">${g.name}</td>
-      <td style="padding:14px 20px;border-bottom:1px solid var(--border);color:var(--muted);">${dateCell}</td>
+      <td style="padding:14px 20px;border-bottom:1px solid var(--border);">${dateCell}</td>
     </tr>`;
   }).join('');
 }
