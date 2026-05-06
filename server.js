@@ -104,7 +104,6 @@ app.delete('/api/entries/:id', requireAuth, (req, res) => {
 app.get('/api/summary/:year', requireAuth, (req, res) => {
   const { year } = req.params;
   const staff = getAll("SELECT * FROM staff WHERE active=1 ORDER BY id");
-
   const ALL_CATS = ['Vacation','Lieu Day','Conference / Training','Travel (work)','Sick Day','Other'];
 
   const summary = staff.map(s => {
@@ -142,6 +141,53 @@ function workdaysBetween(start, end, year) {
   }
   return count;
 }
+
+// ── Holidays ──────────────────────────────────────────────────────────────────
+
+// Flat list for calendar (optionally filtered by year)
+app.get('/api/holidays', requireAuth, (req, res) => {
+  const { year } = req.query;
+  const rows = getAll("SELECT * FROM holidays ORDER BY date");
+  if (!year) return res.json(rows);
+  res.json(rows.filter(h => h.date.startsWith(year)));
+});
+
+// Grouped list for Holidays tab display
+app.get('/api/holidays/grouped', requireAuth, (req, res) => {
+  const rows = getAll("SELECT * FROM holidays ORDER BY date");
+  const groups = {};
+  rows.forEach(h => {
+    if (!groups[h.group_id]) groups[h.group_id] = { group_id: h.group_id, name: h.name, dates: [] };
+    groups[h.group_id].dates.push(h.date);
+  });
+  const sorted = Object.values(groups).sort((a, b) => a.dates[0].localeCompare(b.dates[0]));
+  res.json(sorted);
+});
+
+// Add a holiday — single date or range, expanded to individual rows sharing a group_id
+app.post('/api/holidays', requireAuth, requireAdmin, (req, res) => {
+  const { name, start_date, end_date } = req.body;
+  if (!name || !start_date) return res.status(400).json({ error: 'Name and start date required' });
+  const endD = end_date || start_date;
+  if (endD < start_date) return res.status(400).json({ error: 'End date must be on or after start date' });
+
+  const groupId = Date.now().toString();
+  const cur = new Date(start_date + 'T00:00:00');
+  const end = new Date(endD + 'T00:00:00');
+  let count = 0;
+  while (cur <= end) {
+    const ds = cur.toISOString().slice(0, 10);
+    try { run("INSERT OR REPLACE INTO holidays(date,name,group_id) VALUES(?,?,?)", [ds, name, groupId]); count++; } catch(e) {}
+    cur.setDate(cur.getDate() + 1);
+  }
+  res.json({ ok: true, count });
+});
+
+// Delete all dates belonging to a holiday group
+app.delete('/api/holidays/group/:groupId', requireAuth, requireAdmin, (req, res) => {
+  run("DELETE FROM holidays WHERE group_id=?", [req.params.groupId]);
+  res.json({ ok: true });
+});
 
 // ── Boot ──────────────────────────────────────────────────────────────────────
 initDb().then(() => {

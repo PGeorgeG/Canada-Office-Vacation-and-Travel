@@ -40,6 +40,12 @@ async function initDb() {
       notes TEXT,
       created_at TEXT NOT NULL DEFAULT (datetime('now'))
     );
+    CREATE TABLE IF NOT EXISTS holidays (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      date TEXT NOT NULL UNIQUE,
+      name TEXT NOT NULL,
+      group_id TEXT NOT NULL
+    );
   `);
 
   if (!getOne("SELECT value FROM settings WHERE key='app_password'")) {
