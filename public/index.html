@@ -100,6 +100,9 @@
   .day-num { font-size: 0.78rem; font-weight: 600; color: var(--muted); display: block; margin-bottom: 2px; }
   .weekend { background: #fafaf8; }
   .friday { background: #f5f3ef; }
+  .stat-holiday { background: #e8e4de !important; cursor: default !important; }
+  .stat-holiday:hover { background: #e8e4de !important; }
+  .stat-label { display: block; font-size: 0.62rem; color: #9b8f82; font-style: italic; line-height: 1.2; margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .entry-chip {
     display: block; border-radius: 3px; padding: 1px 4px; font-size: 0.68rem;
     font-weight: 600; color: #fff; margin-bottom: 1px; white-space: nowrap;
@@ -175,6 +178,7 @@
   .cat-sick         { background: #27ae60; }
   .cat-other        { background: #c0392b; }
 
+  .holiday-add-grid { grid-template-columns: 1fr !important; }
   @media (max-width: 700px) {
     main { padding: 16px; }
     .summary-bar { gap: 8px; }
@@ -206,6 +210,7 @@
       <button onclick="showTab('calendar')" id="tab-calendar" class="active">Calendar</button>
       <button onclick="showTab('list')" id="tab-list">List</button>
       <button onclick="showTab('admin')" id="tab-admin">Admin</button>
+      <button onclick="showTab('holidays')" id="tab-holidays">Holidays</button>
     </nav>
     <button class="btn btn-ghost btn-sm" onclick="doLogout()">Sign out</button>
   </header>
@@ -253,6 +258,27 @@
           </div>
         </div>
         <div class="admin-section">
+          <h2>Statutory Holidays</h2>
+          <p style="font-size:0.85rem;color:var(--muted);margin-bottom:18px;">Add holidays individually or as a date range (e.g. Christmas closure week). These days are greyed out on the calendar and blocked for entry.</p>
+          <div style="display:grid;grid-template-columns:1fr auto auto auto;gap:10px;align-items:end;flex-wrap:wrap;" class="holiday-add-grid">
+            <div class="form-group" style="margin:0;">
+              <label>Holiday name</label>
+              <input type="text" id="h-name" placeholder="e.g. Canada Day">
+            </div>
+            <div class="form-group" style="margin:0;">
+              <label>Start date</label>
+              <input type="date" id="h-start">
+            </div>
+            <div class="form-group" style="margin:0;">
+              <label>End date <span style="font-weight:400;text-transform:none;">(optional)</span></label>
+              <input type="date" id="h-end">
+            </div>
+            <button class="btn btn-primary" style="width:auto;align-self:end;" onclick="addHoliday()">Add</button>
+          </div>
+          <div class="error-msg" id="holiday-add-err" style="margin-top:8px;"></div>
+          <div id="holiday-admin-list" style="margin-top:20px;"></div>
+        </div>
+        <div class="admin-section">
           <h2>Change Passwords</h2>
           <div class="form-row" style="align-items:flex-end;gap:16px;flex-wrap:wrap;">
             <div class="form-group" style="flex:1;min-width:200px;">
@@ -271,6 +297,33 @@
           <div class="error-msg" id="pw-msg" style="color:var(--accent);"></div>
         </div>
       </div>
+    <!-- ── HOLIDAYS TAB ── -->
+    <div id="tab-holidays-content" class="hidden">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:24px;flex-wrap:wrap;gap:12px;">
+        <div>
+          <h2 style="font-size:1.1rem;font-weight:700;">Office Holiday Schedule</h2>
+          <p style="font-size:0.85rem;color:var(--muted);margin-top:4px;">Statutory and office holidays — these days are greyed out on the calendar.</p>
+        </div>
+        <div style="display:flex;gap:8px;">
+          <select id="holiday-year-filter" onchange="renderHolidaysTab()" style="padding:7px 12px;border:1px solid var(--border);border-radius:var(--radius);font-size:0.875rem;background:var(--bg);">
+          </select>
+        </div>
+      </div>
+      <div class="admin-section" style="padding:0;overflow:hidden;">
+        <table style="width:100%;border-collapse:collapse;font-size:0.9rem;">
+          <thead>
+            <tr style="background:var(--bg);">
+              <th style="text-align:left;padding:12px 20px;font-size:0.78rem;text-transform:uppercase;letter-spacing:0.04em;color:var(--muted);border-bottom:1px solid var(--border);width:40%;">Holiday</th>
+              <th style="text-align:left;padding:12px 20px;font-size:0.78rem;text-transform:uppercase;letter-spacing:0.04em;color:var(--muted);border-bottom:1px solid var(--border);">Date(s)</th>
+            </tr>
+          </thead>
+          <tbody id="holidays-tab-body">
+            <tr><td colspan="2" style="padding:40px;text-align:center;color:var(--muted);">No holidays loaded yet. Add them in the Admin tab.</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
     </div>
   </main>
 </div>
@@ -329,6 +382,7 @@
 let currentYear = new Date().getFullYear();
 let staffList = [];
 let allEntries = [];
+let holidayMap = {}; // dateStr -> holiday name
 let editingEntryId = null;
 let listFilter = null;
 
@@ -353,6 +407,15 @@ function catEmoji(cat) {
     'Sick Day':'🤒', 'Other':'✏️'
   };
   return map[cat] || '📌';
+}
+
+function catAbbr(cat) {
+  const map = {
+    'Vacation':'vacn', 'Lieu Day':'lieu',
+    'Conference / Training':'conf', 'Travel (work)':'trvl',
+    'Sick Day':'sick', 'Other':'othr'
+  };
+  return map[cat] || 'othr';
 }
 
 // ── Auth ──────────────────────────────────────────────────────────────────────
@@ -398,6 +461,7 @@ async function showAdminPanel() {
   $('admin-panel').classList.remove('hidden');
   await loadAll();
   renderStaffAdmin();
+  renderHolidayAdminList();
 }
 
 // ── Data loading ──────────────────────────────────────────────────────────────
@@ -406,6 +470,9 @@ async function loadAll() {
     fetch('/api/staff').then(r => r.json()),
     fetch(`/api/entries?year=${currentYear}`).then(r => r.json())
   ]);
+  const holidays = await fetch(`/api/holidays?year=${currentYear}`).then(r => r.json());
+  holidayMap = {};
+  holidays.forEach(h => holidayMap[h.date] = h.name);
   renderCalendar();
   renderSummary();
   renderList();
@@ -421,11 +488,12 @@ async function reloadEntries() {
 
 // ── Tabs ──────────────────────────────────────────────────────────────────────
 function showTab(name) {
-  ['calendar','list','admin'].forEach(t => {
+  ['calendar','list','admin','holidays'].forEach(t => {
     $(`tab-${t}-content`).classList.toggle('hidden', t !== name);
     $(`tab-${t}`).classList.toggle('active', t === name);
   });
-  $('fab').classList.toggle('hidden', name === 'admin');
+  $('fab').classList.toggle('hidden', name === 'admin' || name === 'holidays');
+  if (name === 'holidays') renderHolidaysTab();
 }
 
 function changeYear(delta) {
@@ -522,11 +590,16 @@ function renderCalendar() {
       const dayEntries = dateMap[dateStr] || [];
       const chips = dayEntries.map(e =>
         `<span class="entry-chip ${catClass(e.category)}" style="background:${e.color}" 
-          onclick="editEntry(${e.id});event.stopPropagation()" title="${e.staff_name}: ${e.category}">${e.staff_name.slice(0,3)}</span>`
+          onclick="editEntry(${e.id});event.stopPropagation()" title="${e.staff_name}: ${e.category}">${e.staff_name}: ${catAbbr(e.category)}</span>`
       ).join('');
 
-      row += `<td><div class="${cls}" onclick="openEntryModalDate('${dateStr}')">
+      const holidayName = holidayMap[dateStr];
+      if (holidayName) cls += ' stat-holiday';
+      const clickHandler = holidayName ? '' : `onclick="openEntryModalDate('${dateStr}')"`;
+
+      row += `<td><div class="${cls}" ${clickHandler} title="${holidayName || ''}">
         <span class="day-num">${isToday ? `<span>${dayCount}</span>` : dayCount}</span>
+        ${holidayName ? `<span class="stat-label">${holidayName}</span>` : ''}
         ${chips}
       </div></td>`;
 
@@ -651,6 +724,17 @@ async function saveEntry() {
   if (body.start_date > body.end_date) {
     $('entry-err').textContent = 'End date must be on or after start date.'; return;
   }
+  // Check for stat holiday overlap
+  const cur = new Date(body.start_date + 'T00:00:00');
+  const endD = new Date(body.end_date + 'T00:00:00');
+  while (cur <= endD) {
+    const ds = cur.toISOString().slice(0,10);
+    if (holidayMap[ds]) {
+      $('entry-err').textContent = `${holidayMap[ds]} (${ds}) is a stat holiday — please adjust your dates.`;
+      return;
+    }
+    cur.setDate(cur.getDate() + 1);
+  }
   if (body.category === 'Other' && !body.other_label.trim()) {
     $('entry-err').textContent = 'Please describe the Other category.'; return;
   }
@@ -703,6 +787,114 @@ async function saveAllStaff() {
     msg.textContent = 'All saved.';
     setTimeout(() => msg.textContent = '', 2500);
   }
+}
+
+async function addHoliday() {
+  const name = $('h-name').value.trim();
+  const start = $('h-start').value;
+  const end   = $('h-end').value;
+  const err   = $('holiday-add-err');
+  if (!name) { err.textContent = 'Please enter a holiday name.'; return; }
+  if (!start) { err.textContent = 'Please enter a start date.'; return; }
+  if (end && end < start) { err.textContent = 'End date must be on or after start date.'; return; }
+  err.textContent = '';
+  const r = await fetch('/api/holidays', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ name, start_date: start, end_date: end || start })
+  });
+  if (r.ok) {
+    $('h-name').value = ''; $('h-start').value = ''; $('h-end').value = '';
+    await loadAll();
+    renderHolidayAdminList();
+    renderHolidaysTab();
+  } else {
+    const d = await r.json();
+    err.textContent = d.error || 'Failed to add holiday.';
+  }
+}
+
+async function renderHolidayAdminList() {
+  const groups = await fetch('/api/holidays/grouped').then(r => r.json());
+  const el = $('holiday-admin-list');
+  if (!groups.length) {
+    el.innerHTML = '<p style="font-size:0.82rem;color:var(--muted);">No holidays added yet.</p>';
+    return;
+  }
+  el.innerHTML = groups.map(g => {
+    const dateStr = g.dates.length === 1
+      ? fmtFull(g.dates[0])
+      : `${fmtFull(g.dates[0])} – ${fmtFull(g.dates[g.dates.length-1])} (${g.dates.length} days)`;
+    return `<div class="staff-row">
+      <div style="flex:1;">
+        <div style="font-weight:700;font-size:0.9rem;">${g.name}</div>
+        <div style="font-size:0.8rem;color:var(--muted);margin-top:2px;">${dateStr}</div>
+      </div>
+      <button class="btn btn-ghost btn-sm" onclick="deleteHolidayGroup('${g.group_id}')">Remove</button>
+    </div>`;
+  }).join('');
+}
+
+async function deleteHolidayGroup(groupId) {
+  if (!confirm('Remove this holiday?')) return;
+  await fetch(`/api/holidays/group/${groupId}`, { method: 'DELETE' });
+  await loadAll();
+  renderHolidayAdminList();
+  renderHolidaysTab();
+}
+
+// ── Holidays tab ──────────────────────────────────────────────────────────────
+async function renderHolidaysTab() {
+  const groups = await fetch('/api/holidays/grouped').then(r => r.json());
+  const body = $('holidays-tab-body');
+
+  // Populate year filter
+  const yearSel = $('holiday-year-filter');
+  const allYears = [...new Set(groups.flatMap(g => g.dates.map(d => d.slice(0,4))))].sort();
+  if (allYears.length && !yearSel.options.length) {
+    allYears.forEach(y => { const o = document.createElement('option'); o.value = y; o.textContent = y; yearSel.appendChild(o); });
+    // Default to current year if present
+    if (allYears.includes(String(currentYear))) yearSel.value = String(currentYear);
+  }
+  const filterYear = yearSel.value;
+
+  const filtered = filterYear
+    ? groups.filter(g => g.dates.some(d => d.startsWith(filterYear)))
+    : groups;
+
+  if (!filtered.length) {
+    body.innerHTML = '<tr><td colspan="2" style="padding:40px;text-align:center;color:var(--muted);">No holidays for this year. Add them in the Admin tab.</td></tr>';
+    return;
+  }
+
+  const DOW = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+  const MONTH = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+
+  function fmtHolDate(ds) {
+    const d = new Date(ds + 'T00:00:00');
+    return `${DOW[d.getDay()]}, ${MONTH[d.getMonth()]} ${d.getDate()}, ${d.getFullYear()}`;
+  }
+
+  body.innerHTML = filtered.map((g, i) => {
+    const bg = i % 2 === 1 ? 'background:#fdf9f5;' : '';
+    let dateCell;
+    if (g.dates.length === 1) {
+      dateCell = fmtHolDate(g.dates[0]);
+    } else {
+      // Check if contiguous range
+      const first = g.dates[0], last = g.dates[g.dates.length-1];
+      const span = Math.round((new Date(last+'T00:00:00') - new Date(first+'T00:00:00')) / 86400000) + 1;
+      if (span === g.dates.length) {
+        dateCell = `${fmtHolDate(first)} – ${fmtHolDate(last)}`;
+      } else {
+        dateCell = g.dates.map(fmtHolDate).join('<br>');
+      }
+    }
+    return `<tr style="${bg}">
+      <td style="padding:14px 20px;border-bottom:1px solid var(--border);font-weight:600;">${g.name}</td>
+      <td style="padding:14px 20px;border-bottom:1px solid var(--border);color:var(--muted);">${dateCell}</td>
+    </tr>`;
+  }).join('');
 }
 
 async function changePassword(type) {
