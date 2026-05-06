@@ -881,6 +881,8 @@ async function addHoliday() {
     await loadAll();
     renderHolidayAdminList();
     renderHolidaysTab();
+  } else if (r.status === 401 || r.status === 403) {
+    err.textContent = 'Session expired — please sign out and sign back in, then re-unlock Admin.';
   } else {
     const d = await r.json();
     err.textContent = d.error || 'Failed to add holiday.';
@@ -910,7 +912,11 @@ async function renderHolidayAdminList() {
 
 async function deleteHolidayGroup(groupId) {
   if (!confirm('Remove this holiday?')) return;
-  await fetch(`/api/holidays/group/${groupId}`, { method: 'DELETE' });
+  const r = await fetch(`/api/holidays/group/${groupId}`, { method: 'DELETE' });
+  if (r.status === 401 || r.status === 403) {
+    alert('Session expired — please sign out and sign back in, then re-unlock Admin.');
+    return;
+  }
   await loadAll();
   renderHolidayAdminList();
   renderHolidaysTab();
