@@ -618,15 +618,22 @@ function renderCalendar() {
 // ── Summaries view ───────────────────────────────────────────────────────
 const SUMMARY_CATS = ['Vacation', 'Lieu Day', 'Conference / Training', 'Travel (work)', 'Other'];
 
-function countWorkdays(startDate, endDate) {
+function countWorkdays(startDate, endDate, category) {
   const s = new Date(startDate + 'T00:00:00');
   const e = new Date(endDate + 'T00:00:00');
   let count = 0;
   const cur = new Date(s);
+  const isTravel = category === 'Travel (work)';
   while (cur <= e) {
     const d = cur.getDay();
     const ds = cur.toISOString().slice(0, 10);
-    if (d >= 1 && d <= 4 && !holidayMap[ds]) count++;
+    if (isTravel) {
+      // Travel counts all 7 days
+      count++;
+    } else {
+      // Everything else: Mon–Thu only, excluding stat holidays
+      if (d >= 1 && d <= 4 && !holidayMap[ds]) count++;
+    }
     cur.setDate(cur.getDate() + 1);
   }
   return count;
@@ -655,7 +662,7 @@ function renderList() {
     // Totals (excluding Sick Days)
     const totals = {};
     SUMMARY_CATS.forEach(c => {
-      totals[c] = byCat[c].reduce((sum, e) => sum + countWorkdays(e.start_date, e.end_date), 0);
+      totals[c] = byCat[c].reduce((sum, e) => sum + countWorkdays(e.start_date, e.end_date, e.category), 0);
     });
 
     // Rows grouped by category
@@ -664,7 +671,7 @@ function renderList() {
       const entryRows = byCat[cat].map(e => {
         const same = e.start_date === e.end_date;
         const dates = same ? fmtFull(e.start_date) : `${fmt(e.start_date)} – ${fmt(e.end_date)}`;
-        const days = countWorkdays(e.start_date, e.end_date);
+        const days = countWorkdays(e.start_date, e.end_date, e.category);
         const label = cat === 'Other' && e.other_label ? e.other_label : '';
         return `<tr>
           <td style="padding:8px 16px 8px 32px;border-bottom:1px solid var(--border);color:var(--muted);font-size:0.85rem;">${dates}</td>
