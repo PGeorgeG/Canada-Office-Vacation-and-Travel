@@ -369,6 +369,7 @@
       <textarea id="entry-notes" placeholder="Any extra detail…"></textarea>
     </div>
     <div class="error-msg" id="entry-err"></div>
+    <div id="entry-warn" style="font-size:0.83rem;color:#b7860b;background:#fdf8e1;border:1px solid #f0d060;border-radius:6px;padding:8px 12px;margin-top:6px;display:none;"></div>
     <div class="modal-actions">
       <button class="btn btn-danger btn-sm hidden" id="btn-delete-entry" onclick="deleteEntry()">Delete</button>
       <button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
@@ -588,14 +589,20 @@ function renderCalendar() {
       if (isToday) cls += ' today';
 
       const dayEntries = dateMap[dateStr] || [];
-      const chips = dayEntries.map(e =>
-        `<span class="entry-chip ${catClass(e.category)}" style="background:${e.color}" 
-          onclick="editEntry(${e.id});event.stopPropagation()" title="${e.staff_name}: ${e.category}">${e.staff_name}: ${catAbbr(e.category)}</span>`
-      ).join('');
-
       const holidayName = holidayMap[dateStr];
+      const isNonWorkday = isWeekend || isFriday || !!holidayName;
+
+      const chips = dayEntries.map(e => {
+        // Grey out chip if this day is a Fri/Sat/Sun or stat holiday
+        const chipStyle = isNonWorkday
+          ? `background:${e.color};opacity:0.35;`
+          : `background:${e.color};`;
+        return `<span class="entry-chip" style="${chipStyle}"
+          onclick="editEntry(${e.id});event.stopPropagation()" title="${e.staff_name}: ${e.category}${isNonWorkday ? ' (non-workday)' : ''}">${e.staff_name}: ${catAbbr(e.category)}</span>`;
+      }).join('');
+
       if (holidayName) cls += ' stat-holiday';
-      const clickHandler = holidayName ? '' : `onclick="openEntryModalDate('${dateStr}')"`;
+      const clickHandler = `onclick="openEntryModalDate('${dateStr}')"`;
 
       row += `<td><div class="${cls}" ${clickHandler} title="${holidayName || ''}">
         <span class="day-num">${isToday ? `<span>${dayCount}</span>` : dayCount}</span>
@@ -674,6 +681,8 @@ function openEntryModal(defaults = {}) {
   $('entry-notes').value = '';
   $('entry-other-label').value = '';
   $('entry-err').textContent = '';
+  $('entry-warn').style.display = 'none';
+  $('entry-warn').textContent = '';
   $('btn-delete-entry').classList.add('hidden');
   onCategoryChange();
   $('entry-modal').classList.remove('hidden');
@@ -695,6 +704,8 @@ function editEntry(id) {
   $('entry-notes').value = e.notes || '';
   $('entry-other-label').value = e.other_label || '';
   $('entry-err').textContent = '';
+  $('entry-warn').style.display = 'none';
+  $('entry-warn').textContent = '';
   $('btn-delete-entry').classList.remove('hidden');
   onCategoryChange();
   $('entry-modal').classList.remove('hidden');
@@ -724,16 +735,22 @@ async function saveEntry() {
   if (body.start_date > body.end_date) {
     $('entry-err').textContent = 'End date must be on or after start date.'; return;
   }
-  // Check for stat holiday overlap
+  // Check for stat holiday overlap on workdays only — warn but don't block
+  const warnEl = $('entry-warn');
+  warnEl.style.display = 'none'; warnEl.textContent = '';
+  const statHits = [];
   const cur = new Date(body.start_date + 'T00:00:00');
   const endD = new Date(body.end_date + 'T00:00:00');
   while (cur <= endD) {
+    const dow = cur.getDay();
     const ds = cur.toISOString().slice(0,10);
-    if (holidayMap[ds]) {
-      $('entry-err').textContent = `${holidayMap[ds]} (${ds}) is a stat holiday — please adjust your dates.`;
-      return;
-    }
+    if (dow >= 1 && dow <= 4 && holidayMap[ds]) statHits.push(holidayMap[ds]);
     cur.setDate(cur.getDate() + 1);
+  }
+  if (statHits.length) {
+    const unique = [...new Set(statHits)];
+    warnEl.textContent = `⚠️ This range includes ${unique.join(', ')} — stat holiday days won't count toward your total.`;
+    warnEl.style.display = 'block';
   }
   if (body.category === 'Other' && !body.other_label.trim()) {
     $('entry-err').textContent = 'Please describe the Other category.'; return;
