@@ -1,0 +1,717 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PTS Staff Vacation Planner</title>
+<style>
+  :root {
+    --bg: #f7f4ef;
+    --surface: #ffffff;
+    --border: #e0d9d0;
+    --text: #2c2825;
+    --muted: #8a8078;
+    --accent: #4f86c6;
+    --danger: #c0392b;
+    --radius: 8px;
+    --shadow: 0 2px 8px rgba(0,0,0,0.08);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
+
+  /* ── Login ── */
+  #login-screen {
+    display: flex; align-items: center; justify-content: center; min-height: 100vh;
+  }
+  .login-card {
+    background: var(--surface); border-radius: 12px; box-shadow: var(--shadow);
+    padding: 48px 40px; width: 360px; text-align: center;
+  }
+  .login-card h1 { font-size: 1.4rem; margin-bottom: 6px; }
+  .login-card p { color: var(--muted); font-size: 0.9rem; margin-bottom: 28px; }
+  .login-card input {
+    width: 100%; padding: 10px 14px; border: 1px solid var(--border); border-radius: var(--radius);
+    font-size: 1rem; margin-bottom: 14px; background: var(--bg);
+  }
+  .btn {
+    display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+    padding: 10px 20px; border-radius: var(--radius); border: none; cursor: pointer;
+    font-size: 0.9rem; font-weight: 600; transition: opacity 0.15s;
+  }
+  .btn:hover { opacity: 0.85; }
+  .btn-primary { background: var(--accent); color: #fff; width: 100%; padding: 11px; }
+  .btn-ghost { background: transparent; color: var(--muted); border: 1px solid var(--border); }
+  .btn-danger { background: var(--danger); color: #fff; }
+  .btn-sm { padding: 6px 12px; font-size: 0.8rem; }
+  .error-msg { color: var(--danger); font-size: 0.85rem; margin-top: 8px; min-height: 18px; }
+
+  /* ── App shell ── */
+  #app { display: none; }
+  header {
+    background: var(--surface); border-bottom: 1px solid var(--border);
+    padding: 0 28px; display: flex; align-items: center; gap: 20px; height: 58px;
+  }
+  header h1 { font-size: 1.05rem; font-weight: 700; flex: 1; }
+  nav { display: flex; gap: 4px; }
+  nav button {
+    padding: 7px 16px; border-radius: 6px; border: none; background: transparent;
+    cursor: pointer; font-size: 0.875rem; color: var(--muted); font-weight: 500;
+    transition: background 0.15s, color 0.15s;
+  }
+  nav button.active, nav button:hover { background: var(--bg); color: var(--text); }
+  nav button.active { font-weight: 700; color: var(--accent); }
+
+  main { padding: 28px; max-width: 1200px; margin: 0 auto; }
+
+  /* ── Year nav ── */
+  .year-nav { display: flex; align-items: center; gap: 12px; margin-bottom: 24px; }
+  .year-nav button { background: var(--surface); border: 1px solid var(--border); border-radius: 6px; padding: 6px 14px; cursor: pointer; font-size: 0.9rem; }
+  .year-nav span { font-size: 1.2rem; font-weight: 700; min-width: 60px; text-align: center; }
+
+  /* ── Summary bar ── */
+  .summary-bar { display: flex; gap: 12px; margin-bottom: 28px; flex-wrap: wrap; }
+  .summary-card {
+    background: var(--surface); border-radius: var(--radius); border: 1px solid var(--border);
+    padding: 14px 18px; flex: 1; min-width: 160px;
+  }
+  .summary-card .name { font-size: 0.8rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 8px; }
+  .summary-card .days { font-size: 1.5rem; font-weight: 700; }
+  .summary-card .label { font-size: 0.75rem; color: var(--muted); }
+  .summary-card .bar-track { height: 6px; background: var(--border); border-radius: 3px; margin-top: 10px; }
+  .summary-card .bar-fill { height: 100%; border-radius: 3px; transition: width 0.4s; }
+  .summary-card .breakdown { margin-top: 10px; border-top: 1px solid var(--border); padding-top: 8px; }
+  .summary-card .breakdown-row { display: flex; justify-content: space-between; font-size: 0.72rem; color: var(--muted); padding: 1px 0; }
+  .summary-card .breakdown-row span:last-child { font-weight: 600; color: var(--text); }
+
+  /* ── Calendar ── */
+  .calendar-grid { display: grid; gap: 16px; }
+  .month-block { background: var(--surface); border-radius: var(--radius); border: 1px solid var(--border); overflow: hidden; }
+  .month-header { padding: 10px 16px; font-weight: 700; font-size: 0.95rem; background: var(--bg); border-bottom: 1px solid var(--border); }
+  .cal-table { width: 100%; border-collapse: collapse; }
+  .cal-table th { padding: 6px 4px; font-size: 0.72rem; color: var(--muted); text-align: center; font-weight: 600; border-bottom: 1px solid var(--border); }
+  .cal-table td { padding: 2px; vertical-align: top; min-width: 40px; text-align: center; }
+  .day-cell {
+    min-height: 52px; border-radius: 4px; font-size: 0.78rem; padding: 4px 3px;
+    position: relative; cursor: pointer; transition: background 0.1s;
+  }
+  .day-cell:hover { background: var(--bg); }
+  .day-cell.other-month { opacity: 0.2; pointer-events: none; }
+  .day-cell.today .day-num { background: var(--accent); color: #fff; border-radius: 50%; width: 20px; height: 20px; display: inline-flex; align-items: center; justify-content: center; }
+  .day-num { font-size: 0.78rem; font-weight: 600; color: var(--muted); display: block; margin-bottom: 2px; }
+  .weekend { background: #fafaf8; }
+  .friday { background: #f5f3ef; }
+  .entry-chip {
+    display: block; border-radius: 3px; padding: 1px 4px; font-size: 0.68rem;
+    font-weight: 600; color: #fff; margin-bottom: 1px; white-space: nowrap;
+    overflow: hidden; text-overflow: ellipsis; cursor: pointer;
+    opacity: 0.9;
+  }
+  .entry-chip:hover { opacity: 1; }
+
+  /* ── List view ── */
+  .entries-list { display: flex; flex-direction: column; gap: 10px; }
+  .entry-row {
+    background: var(--surface); border-radius: var(--radius); border: 1px solid var(--border);
+    padding: 14px 18px; display: flex; align-items: center; gap: 16px;
+  }
+  .entry-row .swatch { width: 12px; height: 12px; border-radius: 50%; flex-shrink: 0; }
+  .entry-row .info { flex: 1; }
+  .entry-row .info .who { font-weight: 700; font-size: 0.9rem; }
+  .entry-row .info .what { font-size: 0.82rem; color: var(--muted); margin-top: 2px; }
+  .entry-row .dates { font-size: 0.85rem; color: var(--muted); white-space: nowrap; }
+
+  /* ── Modal ── */
+  .modal-overlay {
+    position: fixed; inset: 0; background: rgba(0,0,0,0.35); z-index: 100;
+    display: flex; align-items: center; justify-content: center; padding: 20px;
+  }
+  .modal {
+    background: var(--surface); border-radius: 12px; box-shadow: 0 8px 32px rgba(0,0,0,0.18);
+    width: 100%; max-width: 480px; padding: 28px;
+  }
+  .modal h2 { font-size: 1.1rem; margin-bottom: 20px; }
+  .form-group { margin-bottom: 16px; }
+  .form-group label { display: block; font-size: 0.82rem; font-weight: 600; margin-bottom: 6px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.03em; }
+  .form-group select, .form-group input[type=text], .form-group input[type=date], .form-group textarea, .form-group input[type=number], .form-group input[type=password] {
+    width: 100%; padding: 9px 12px; border: 1px solid var(--border); border-radius: var(--radius);
+    font-size: 0.9rem; background: var(--bg); color: var(--text);
+  }
+  .form-group textarea { resize: vertical; min-height: 72px; }
+  .form-row { display: flex; gap: 12px; }
+  .form-row .form-group { flex: 1; }
+  .modal-actions { display: flex; gap: 10px; justify-content: flex-end; margin-top: 24px; }
+
+  /* ── Admin ── */
+  .admin-section { background: var(--surface); border-radius: var(--radius); border: 1px solid var(--border); padding: 24px; margin-bottom: 20px; }
+  .admin-section h2 { font-size: 1rem; font-weight: 700; margin-bottom: 18px; }
+  .staff-row { display: flex; align-items: center; gap: 14px; padding: 12px 0; border-bottom: 1px solid var(--border); }
+  .staff-row:last-child { border-bottom: none; }
+  .staff-row .swatch-pick { width: 32px; height: 32px; border-radius: 50%; border: 3px solid var(--border); cursor: pointer; overflow: hidden; }
+  .staff-row .swatch-pick input[type=color] { width: 48px; height: 48px; border: none; margin: -8px; cursor: pointer; }
+  .staff-row .staff-name { font-weight: 700; flex: 1; }
+  .staff-row input[type=number] { width: 80px; }
+  .staff-row .btn { flex-shrink: 0; }
+
+  .admin-locked { text-align: center; padding: 60px 20px; }
+  .admin-locked p { color: var(--muted); margin-bottom: 20px; }
+
+  /* ── FAB ── */
+  .fab {
+    position: fixed; bottom: 28px; right: 28px; width: 56px; height: 56px;
+    border-radius: 50%; background: var(--accent); color: #fff; border: none;
+    font-size: 1.6rem; cursor: pointer; box-shadow: 0 4px 16px rgba(0,0,0,0.2);
+    display: flex; align-items: center; justify-content: center;
+    transition: transform 0.15s, box-shadow 0.15s; z-index: 50;
+  }
+  .fab:hover { transform: scale(1.07); box-shadow: 0 6px 20px rgba(0,0,0,0.28); }
+
+  .hidden { display: none !important; }
+
+  /* Category colours in chips */
+  .cat-vacation     { background: #4f86c6; }
+  .cat-lieu         { background: #7f8c8d; }
+  .cat-conference   { background: #8e44ad; }
+  .cat-travel       { background: #d35400; }
+  .cat-sick         { background: #27ae60; }
+  .cat-other        { background: #c0392b; }
+
+  @media (max-width: 700px) {
+    main { padding: 16px; }
+    .summary-bar { gap: 8px; }
+    .summary-card { min-width: 140px; }
+    header { padding: 0 16px; }
+    header h1 { font-size: 0.9rem; }
+    nav button { padding: 6px 10px; font-size: 0.8rem; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ── LOGIN ─────────────────────────────────────────────────────────────── -->
+<div id="login-screen">
+  <div class="login-card">
+    <h1>📅 PTS Vacation Planner</h1>
+    <p>Canada Staff · 2026</p>
+    <input type="password" id="login-pw" placeholder="Password" onkeydown="if(event.key==='Enter')doLogin()">
+    <button class="btn btn-primary" onclick="doLogin()">Sign In</button>
+    <div class="error-msg" id="login-err"></div>
+  </div>
+</div>
+
+<!-- ── APP ───────────────────────────────────────────────────────────────── -->
+<div id="app">
+  <header>
+    <h1>📅 PTS Staff Vacation Planner</h1>
+    <nav>
+      <button onclick="showTab('calendar')" id="tab-calendar" class="active">Calendar</button>
+      <button onclick="showTab('list')" id="tab-list">List</button>
+      <button onclick="showTab('admin')" id="tab-admin">Admin</button>
+    </nav>
+    <button class="btn btn-ghost btn-sm" onclick="doLogout()">Sign out</button>
+  </header>
+
+  <main>
+    <!-- Year nav -->
+    <div class="year-nav">
+      <button onclick="changeYear(-1)">&#8592;</button>
+      <span id="year-label">2026</span>
+      <button onclick="changeYear(1)">&#8594;</button>
+    </div>
+
+    <!-- ── CALENDAR TAB ── -->
+    <div id="tab-calendar-content">
+      <div class="summary-bar" id="summary-bar"></div>
+      <div class="calendar-grid" id="calendar-grid"></div>
+    </div>
+
+    <!-- ── LIST TAB ── -->
+    <div id="tab-list-content" class="hidden">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;">
+        <div style="display:flex;gap:8px;flex-wrap:wrap;" id="list-filters"></div>
+      </div>
+      <div class="entries-list" id="entries-list"></div>
+    </div>
+
+    <!-- ── ADMIN TAB ── -->
+    <div id="tab-admin-content" class="hidden">
+      <div class="admin-locked" id="admin-locked">
+        <p>Enter the admin password to manage staff settings.</p>
+        <div style="display:flex;gap:10px;justify-content:center;align-items:center;flex-wrap:wrap;">
+          <input type="password" id="admin-pw" placeholder="Admin password" style="padding:9px 14px;border:1px solid var(--border);border-radius:var(--radius);font-size:0.9rem;background:var(--bg);" onkeydown="if(event.key==='Enter')doAdminLogin()">
+          <button class="btn btn-primary" style="width:auto;" onclick="doAdminLogin()">Unlock</button>
+        </div>
+        <div class="error-msg" id="admin-err" style="margin-top:10px;"></div>
+      </div>
+
+      <div id="admin-panel" class="hidden">
+        <div class="admin-section">
+          <h2>Staff Vacation Allotments</h2>
+          <div id="staff-list"></div>
+        </div>
+        <div class="admin-section">
+          <h2>Change Passwords</h2>
+          <div class="form-row" style="align-items:flex-end;gap:16px;flex-wrap:wrap;">
+            <div class="form-group" style="flex:1;min-width:200px;">
+              <label>App Password (shared by team)</label>
+              <input type="password" id="new-app-pw" placeholder="New password">
+            </div>
+            <button class="btn btn-ghost" onclick="changePassword('app')">Update</button>
+          </div>
+          <div class="form-row" style="align-items:flex-end;gap:16px;flex-wrap:wrap;margin-top:8px;">
+            <div class="form-group" style="flex:1;min-width:200px;">
+              <label>Admin Password</label>
+              <input type="password" id="new-admin-pw" placeholder="New password">
+            </div>
+            <button class="btn btn-ghost" onclick="changePassword('admin')">Update</button>
+          </div>
+          <div class="error-msg" id="pw-msg" style="color:var(--accent);"></div>
+        </div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<!-- ── FAB ── -->
+<button class="fab" id="fab" onclick="openEntryModal()" title="Add entry">+</button>
+
+<!-- ── ENTRY MODAL ── -->
+<div class="modal-overlay hidden" id="entry-modal">
+  <div class="modal">
+    <h2 id="modal-title">Add Entry</h2>
+    <div class="form-group">
+      <label>Person</label>
+      <select id="entry-staff"></select>
+    </div>
+    <div class="form-group">
+      <label>Category</label>
+      <select id="entry-category" onchange="onCategoryChange()">
+        <option value="Vacation">🏖 Vacation</option>
+        <option value="Lieu Day">🔄 Lieu Day</option>
+        <option value="Conference / Training">🎓 Conference / Training</option>
+        <option value="Travel (work)">✈️ Travel (work)</option>
+        <option value="Sick Day">🤒 Sick Day</option>
+        <option value="Other">✏️ Other</option>
+      </select>
+    </div>
+    <div class="form-group hidden" id="other-label-group">
+      <label>Describe</label>
+      <input type="text" id="entry-other-label" placeholder="e.g. School visit, Maternity leave…">
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>Start date</label>
+        <input type="date" id="entry-start">
+      </div>
+      <div class="form-group">
+        <label>End date</label>
+        <input type="date" id="entry-end">
+      </div>
+    </div>
+    <div class="form-group">
+      <label>Notes <span style="font-weight:400;text-transform:none;">(optional)</span></label>
+      <textarea id="entry-notes" placeholder="Any extra detail…"></textarea>
+    </div>
+    <div class="error-msg" id="entry-err"></div>
+    <div class="modal-actions">
+      <button class="btn btn-danger btn-sm hidden" id="btn-delete-entry" onclick="deleteEntry()">Delete</button>
+      <button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
+      <button class="btn btn-primary" style="width:auto;" onclick="saveEntry()">Save</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ── State ─────────────────────────────────────────────────────────────────────
+let currentYear = new Date().getFullYear();
+let staffList = [];
+let allEntries = [];
+let editingEntryId = null;
+let listFilter = null;
+
+// ── Helpers ───────────────────────────────────────────────────────────────────
+const $ = id => document.getElementById(id);
+const fmt = d => new Date(d + 'T00:00:00').toLocaleDateString('en-CA', { month: 'short', day: 'numeric' });
+const fmtFull = d => new Date(d + 'T00:00:00').toLocaleDateString('en-CA', { year:'numeric', month: 'short', day: 'numeric' });
+
+function catClass(cat) {
+  const map = {
+    'Vacation': 'cat-vacation', 'Lieu Day': 'cat-lieu',
+    'Conference / Training': 'cat-conference', 'Travel (work)': 'cat-travel',
+    'Sick Day': 'cat-sick', 'Other': 'cat-other'
+  };
+  return map[cat] || 'cat-other';
+}
+
+function catEmoji(cat) {
+  const map = {
+    'Vacation':'🏖', 'Lieu Day':'🔄',
+    'Conference / Training':'🎓', 'Travel (work)':'✈️',
+    'Sick Day':'🤒', 'Other':'✏️'
+  };
+  return map[cat] || '📌';
+}
+
+// ── Auth ──────────────────────────────────────────────────────────────────────
+async function init() {
+  const s = await fetch('/api/session').then(r => r.json());
+  if (s.authenticated) {
+    $('login-screen').style.display = 'none';
+    $('app').style.display = 'block';
+    if (s.admin) showAdminPanel();
+    await loadAll();
+  }
+}
+
+async function doLogin() {
+  const pw = $('login-pw').value;
+  const r = await fetch('/api/login', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({password: pw}) });
+  if (r.ok) {
+    $('login-screen').style.display = 'none';
+    $('app').style.display = 'block';
+    await loadAll();
+  } else {
+    $('login-err').textContent = 'Incorrect password. Try again.';
+  }
+}
+
+async function doLogout() {
+  await fetch('/api/logout', { method:'POST' });
+  location.reload();
+}
+
+async function doAdminLogin() {
+  const pw = $('admin-pw').value;
+  const r = await fetch('/api/admin-login', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({password: pw}) });
+  if (r.ok) {
+    showAdminPanel();
+  } else {
+    $('admin-err').textContent = 'Incorrect admin password.';
+  }
+}
+
+function showAdminPanel() {
+  $('admin-locked').classList.add('hidden');
+  $('admin-panel').classList.remove('hidden');
+  renderStaffAdmin();
+}
+
+// ── Data loading ──────────────────────────────────────────────────────────────
+async function loadAll() {
+  [staffList, allEntries] = await Promise.all([
+    fetch('/api/staff').then(r => r.json()),
+    fetch(`/api/entries?year=${currentYear}`).then(r => r.json())
+  ]);
+  renderCalendar();
+  renderSummary();
+  renderList();
+  populateStaffSelect();
+}
+
+async function reloadEntries() {
+  allEntries = await fetch(`/api/entries?year=${currentYear}`).then(r => r.json());
+  renderCalendar();
+  renderSummary();
+  renderList();
+}
+
+// ── Tabs ──────────────────────────────────────────────────────────────────────
+function showTab(name) {
+  ['calendar','list','admin'].forEach(t => {
+    $(`tab-${t}-content`).classList.toggle('hidden', t !== name);
+    $(`tab-${t}`).classList.toggle('active', t === name);
+  });
+  $('fab').classList.toggle('hidden', name === 'admin');
+}
+
+function changeYear(delta) {
+  currentYear += delta;
+  $('year-label').textContent = currentYear;
+  loadAll();
+}
+
+// ── Summary bar ───────────────────────────────────────────────────────────────
+async function renderSummary() {
+  const summary = await fetch(`/api/summary/${currentYear}`).then(r => r.json());
+  const bar = $('summary-bar');
+  const CAT_LABELS = {
+    'Lieu Day': 'Lieu Days',
+    'Conference / Training': 'Conference/Training',
+    'Travel (work)': 'Travel (work)',
+    'Sick Day': 'Sick Days',
+    'Other': 'Other'
+  };
+  bar.innerHTML = summary.map(s => {
+    const pct = Math.min(100, Math.round((s.used / s.vacation_days) * 100)) || 0;
+    const overUsed = s.used > s.vacation_days;
+    const breakdownHtml = Object.entries(CAT_LABELS)
+      .filter(([cat]) => s.breakdown[cat] > 0)
+      .map(([cat, label]) => `<div class="breakdown-row"><span>${label}</span><span>${s.breakdown[cat]}d</span></div>`)
+      .join('');
+    return `
+      <div class="summary-card">
+        <div class="name" style="color:${s.color}">${s.name}</div>
+        <div class="days" style="color:${overUsed ? 'var(--danger)' : 'var(--text)'}">${s.remaining}<span style="font-size:0.9rem;font-weight:400;color:var(--muted)"> left</span></div>
+        <div class="label">${s.used} of ${s.vacation_days} vacation days used</div>
+        <div class="bar-track"><div class="bar-fill" style="width:${pct}%;background:${s.color}"></div></div>
+        ${breakdownHtml ? `<div class="breakdown">${breakdownHtml}</div>` : ''}
+      </div>`;
+  }).join('');
+}
+
+// ── Calendar ──────────────────────────────────────────────────────────────────
+function renderCalendar() {
+  const grid = $('calendar-grid');
+  grid.innerHTML = '';
+
+  // Build a quick lookup: dateStr -> [entries]
+  const dateMap = {};
+  allEntries.forEach(e => {
+    let cur = new Date(e.start_date + 'T00:00:00');
+    const end = new Date(e.end_date + 'T00:00:00');
+    while (cur <= end) {
+      const key = cur.toISOString().slice(0,10);
+      if (!dateMap[key]) dateMap[key] = [];
+      dateMap[key].push(e);
+      cur.setDate(cur.getDate() + 1);
+    }
+  });
+
+  const today = new Date().toISOString().slice(0,10);
+
+  for (let m = 0; m < 12; m++) {
+    const monthDate = new Date(currentYear, m, 1);
+    const monthName = monthDate.toLocaleDateString('en-CA', { month: 'long' });
+
+    // Grid: Sun–Sat
+    const firstDay = monthDate.getDay();
+    const daysInMonth = new Date(currentYear, m + 1, 0).getDate();
+
+    let html = `
+      <div class="month-block">
+        <div class="month-header">${monthName} ${currentYear}</div>
+        <table class="cal-table">
+          <thead><tr>
+            <th>Sun</th><th>Mon</th><th>Tue</th><th>Wed</th><th>Thu</th><th>Fri</th><th>Sat</th>
+          </tr></thead>
+          <tbody>`;
+
+    let dayCount = 1;
+    let row = '<tr>';
+    // Leading blanks
+    for (let i = 0; i < firstDay; i++) {
+      row += '<td><div class="day-cell other-month"></div></td>';
+    }
+    let col = firstDay;
+
+    while (dayCount <= daysInMonth) {
+      const dateStr = `${currentYear}-${String(m+1).padStart(2,'0')}-${String(dayCount).padStart(2,'0')}`;
+      const dow = (firstDay + dayCount - 1) % 7;
+      const isWeekend = dow === 0 || dow === 6;
+      const isFriday = dow === 5;
+      const isToday = dateStr === today;
+      let cls = 'day-cell';
+      if (isWeekend) cls += ' weekend';
+      else if (isFriday) cls += ' friday';
+      if (isToday) cls += ' today';
+
+      const dayEntries = dateMap[dateStr] || [];
+      const chips = dayEntries.map(e =>
+        `<span class="entry-chip ${catClass(e.category)}" style="background:${e.color}" 
+          onclick="editEntry(${e.id});event.stopPropagation()" title="${e.staff_name}: ${e.category}">${e.staff_name.slice(0,3)}</span>`
+      ).join('');
+
+      row += `<td><div class="${cls}" onclick="openEntryModalDate('${dateStr}')">
+        <span class="day-num">${isToday ? `<span>${dayCount}</span>` : dayCount}</span>
+        ${chips}
+      </div></td>`;
+
+      col++;
+      if (col > 6) { row += '</tr>'; html += row; row = '<tr>'; col = 0; }
+      dayCount++;
+    }
+    // Trailing blanks
+    if (col > 0 && col <= 6) {
+      for (let i = col; i <= 6; i++) row += '<td><div class="day-cell other-month"></div></td>';
+      row += '</tr>';
+      html += row;
+    }
+
+    html += '</tbody></table></div>';
+    grid.insertAdjacentHTML('beforeend', html);
+  }
+}
+
+// ── List view ─────────────────────────────────────────────────────────────────
+function renderList() {
+  // Filter buttons
+  const filters = $('list-filters');
+  filters.innerHTML = `<button class="btn btn-sm ${!listFilter ? 'btn-primary' : 'btn-ghost'}" onclick="setFilter(null)">All</button>` +
+    staffList.map(s =>
+      `<button class="btn btn-sm ${listFilter === s.id ? 'btn-primary' : 'btn-ghost'}" onclick="setFilter(${s.id})" style="${listFilter===s.id?`background:${s.color};`:''}">${s.name}</button>`
+    ).join('');
+
+  const filtered = listFilter ? allEntries.filter(e => e.staff_id === listFilter) : allEntries;
+  const list = $('entries-list');
+
+  if (!filtered.length) {
+    list.innerHTML = `<p style="color:var(--muted);text-align:center;padding:40px;">No entries for ${currentYear}.</p>`;
+    return;
+  }
+
+  list.innerHTML = filtered.map(e => {
+    const label = e.category === 'Other' && e.other_label ? `Other: ${e.other_label}` : e.category;
+    const same = e.start_date === e.end_date;
+    const dates = same ? fmtFull(e.start_date) : `${fmt(e.start_date)} – ${fmt(e.end_date)}`;
+    return `
+      <div class="entry-row">
+        <div class="swatch" style="background:${e.color}"></div>
+        <div class="info">
+          <div class="who">${e.staff_name}</div>
+          <div class="what">${catEmoji(e.category)} ${label}${e.notes ? ' · ' + e.notes : ''}</div>
+        </div>
+        <div class="dates">${dates}</div>
+        <button class="btn btn-ghost btn-sm" onclick="editEntry(${e.id})">Edit</button>
+      </div>`;
+  }).join('');
+}
+
+function setFilter(id) {
+  listFilter = id;
+  renderList();
+}
+
+// ── Entry modal ───────────────────────────────────────────────────────────────
+function populateStaffSelect() {
+  $('entry-staff').innerHTML = staffList.map(s =>
+    `<option value="${s.id}">${s.name}</option>`
+  ).join('');
+}
+
+function openEntryModal(defaults = {}) {
+  editingEntryId = null;
+  $('modal-title').textContent = 'Add Entry';
+  $('entry-category').value = defaults.category || 'Vacation';
+  $('entry-start').value = defaults.date || '';
+  $('entry-end').value = defaults.date || '';
+  $('entry-notes').value = '';
+  $('entry-other-label').value = '';
+  $('entry-err').textContent = '';
+  $('btn-delete-entry').classList.add('hidden');
+  onCategoryChange();
+  $('entry-modal').classList.remove('hidden');
+}
+
+function openEntryModalDate(dateStr) {
+  openEntryModal({ date: dateStr });
+}
+
+function editEntry(id) {
+  const e = allEntries.find(x => x.id === id);
+  if (!e) return;
+  editingEntryId = id;
+  $('modal-title').textContent = 'Edit Entry';
+  $('entry-staff').value = e.staff_id;
+  $('entry-category').value = e.category;
+  $('entry-start').value = e.start_date;
+  $('entry-end').value = e.end_date;
+  $('entry-notes').value = e.notes || '';
+  $('entry-other-label').value = e.other_label || '';
+  $('entry-err').textContent = '';
+  $('btn-delete-entry').classList.remove('hidden');
+  onCategoryChange();
+  $('entry-modal').classList.remove('hidden');
+}
+
+function onCategoryChange() {
+  const cat = $('entry-category').value;
+  $('other-label-group').classList.toggle('hidden', cat !== 'Other');
+}
+
+function closeModal() {
+  $('entry-modal').classList.add('hidden');
+}
+
+async function saveEntry() {
+  const body = {
+    staff_id: parseInt($('entry-staff').value),
+    category: $('entry-category').value,
+    other_label: $('entry-other-label').value,
+    start_date: $('entry-start').value,
+    end_date: $('entry-end').value,
+    notes: $('entry-notes').value
+  };
+  if (!body.start_date || !body.end_date) {
+    $('entry-err').textContent = 'Please fill in both dates.'; return;
+  }
+  if (body.start_date > body.end_date) {
+    $('entry-err').textContent = 'End date must be on or after start date.'; return;
+  }
+  if (body.category === 'Other' && !body.other_label.trim()) {
+    $('entry-err').textContent = 'Please describe the Other category.'; return;
+  }
+
+  const url = editingEntryId ? `/api/entries/${editingEntryId}` : '/api/entries';
+  const method = editingEntryId ? 'PUT' : 'POST';
+  const r = await fetch(url, { method, headers:{'Content-Type':'application/json'}, body: JSON.stringify(body) });
+  if (r.ok) { closeModal(); await reloadEntries(); }
+  else $('entry-err').textContent = 'Something went wrong. Please try again.';
+}
+
+async function deleteEntry() {
+  if (!editingEntryId) return;
+  if (!confirm('Delete this entry?')) return;
+  await fetch(`/api/entries/${editingEntryId}`, { method:'DELETE' });
+  closeModal();
+  await reloadEntries();
+}
+
+// ── Admin panel ───────────────────────────────────────────────────────────────
+function renderStaffAdmin() {
+  $('staff-list').innerHTML = staffList.map(s => `
+    <div class="staff-row">
+      <div class="swatch-pick" style="background:${s.color}">
+        <input type="color" value="${s.color}" id="color-${s.id}" onchange="document.getElementById('color-${s.id}').parentElement.style.background=this.value">
+      </div>
+      <div class="staff-name">${s.name}</div>
+      <div class="form-group" style="margin:0;">
+        <input type="number" id="days-${s.id}" value="${s.vacation_days}" min="0" max="365" step="1">
+      </div>
+      <button class="btn btn-ghost btn-sm" onclick="saveStaff(${s.id})">Save</button>
+    </div>
+  `).join('');
+}
+
+async function saveStaff(id) {
+  const days = parseInt($(`days-${id}`).value);
+  const color = $(`color-${id}`).value;
+  const r = await fetch(`/api/staff/${id}`, {
+    method: 'PUT',
+    headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({ vacation_days: days, color })
+  });
+  if (r.ok) {
+    await loadAll();
+    renderStaffAdmin();
+  }
+}
+
+async function changePassword(type) {
+  const val = type === 'app' ? $('new-app-pw').value : $('new-admin-pw').value;
+  const r = await fetch('/api/admin/change-password', {
+    method: 'POST',
+    headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({ type, newPassword: val })
+  });
+  const msg = $('pw-msg');
+  if (r.ok) { msg.textContent = 'Password updated.'; setTimeout(() => msg.textContent = '', 3000); }
+  else { msg.style.color = 'var(--danger)'; msg.textContent = 'Failed. Password must be at least 4 characters.'; }
+}
+
+// ── Close modal on overlay click ──────────────────────────────────────────────
+$('entry-modal').addEventListener('click', e => { if (e.target === $('entry-modal')) closeModal(); });
+
+// ── Boot ──────────────────────────────────────────────────────────────────────
+init();
+</script>
+</body>
+</html>
