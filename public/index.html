@@ -693,7 +693,7 @@ function renderList() {
 
       return `<tr style="background:var(--bg);">
           <td colspan="4" style="padding:8px 16px;border-bottom:1px solid var(--border);font-size:0.78rem;font-weight:700;text-transform:uppercase;letter-spacing:0.04em;color:var(--muted);">
-            ${catEmoji(cat)} ${cat} <span style="font-weight:400;margin-left:6px;">${totals[cat]}d total</span>
+            ${catEmoji(cat)} ${cat} <span style="font-weight:400;margin-left:6px;">${cat === "Travel (work)" && s.travel_days ? `${totals[cat]}d/${s.travel_days}d` : `${totals[cat]}d total`}</span>
           </td>
         </tr>
         ${entryRows}`;
