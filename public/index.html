@@ -242,12 +242,6 @@
       <div id="admin-panel" class="hidden">
         <div class="admin-section">
           <h2>Allotments</h2>
-          <div style="display:grid;grid-template-columns:40px 1fr 1fr 1fr auto;gap:10px;padding:0 0 8px 0;border-bottom:1px solid var(--border);margin-bottom:4px;">
-            <div></div><div></div>
-            <div style="font-size:0.75rem;font-weight:700;text-transform:uppercase;letter-spacing:0.04em;color:var(--muted);">Vacation</div>
-            <div style="font-size:0.75rem;font-weight:700;text-transform:uppercase;letter-spacing:0.04em;color:var(--muted);">Work Travel</div>
-            <div></div>
-          </div>
           <div id="staff-list"></div>
           <div style="margin-top:18px;display:flex;align-items:center;gap:12px;">
             <button class="btn btn-primary" style="width:auto;" onclick="saveAllStaff()">Save All</button>
@@ -856,18 +850,20 @@ function renderStaffAdmin() {
   $('staff-list').innerHTML = staffList.map(s => {
     const url = `${base}/calendar.ics?person=${encodeURIComponent(s.name)}`;
     return `
-    <div class="staff-row">
-      <div class="swatch-pick" style="background:${s.color}">
+    <div class="staff-row" style="display:flex;align-items:center;gap:14px;flex-wrap:wrap;">
+      <div class="swatch-pick" style="background:${s.color};flex-shrink:0;">
         <input type="color" value="${s.color}" id="color-${s.id}" onchange="document.getElementById('color-${s.id}').parentElement.style.background=this.value">
       </div>
-      <div class="staff-name">${s.name}</div>
-      <div class="form-group" style="margin:0;">
-        <input type="number" id="days-${s.id}" value="${s.vacation_days}" min="0" max="365" step="1" title="Vacation days">
+      <div class="staff-name" style="min-width:80px;">${s.name}</div>
+      <div style="display:flex;align-items:center;gap:6px;">
+        <label style="font-size:0.78rem;color:var(--muted);white-space:nowrap;">Vacation</label>
+        <input type="number" id="days-${s.id}" value="${s.vacation_days}" min="0" max="365" step="1" style="width:70px;padding:6px 8px;border:1px solid var(--border);border-radius:var(--radius);font-size:0.9rem;background:var(--bg);">
       </div>
-      <div class="form-group" style="margin:0;">
-        <input type="number" id="travel-${s.id}" value="${s.travel_days || 0}" min="0" max="999" step="1" title="Work travel days">
+      <div style="display:flex;align-items:center;gap:6px;">
+        <label style="font-size:0.78rem;color:var(--muted);white-space:nowrap;">Work Travel</label>
+        <input type="number" id="travel-${s.id}" value="${s.travel_days != null ? s.travel_days : 0}" min="0" max="999" step="1" style="width:70px;padding:6px 8px;border:1px solid var(--border);border-radius:var(--radius);font-size:0.9rem;background:var(--bg);">
       </div>
-      <div style="display:flex;align-items:center;gap:8px;flex-shrink:0;">
+      <div style="display:flex;align-items:center;gap:8px;flex-shrink:0;margin-left:auto;">
         <button onclick="copyIcalUrl('${url}', this)" style="background:none;border:none;cursor:pointer;padding:0;color:var(--accent);font-size:0.82rem;text-decoration:underline;" title="${url}">Link for Calendar</button>
         <span id="copy-msg-${s.id}" style="font-size:0.75rem;color:var(--accent);opacity:0;transition:opacity 0.3s;">Copied!</span>
       </div>
@@ -885,10 +881,10 @@ function copyIcalUrl(url, btn) {
 
 async function saveAllStaff() {
   const saves = staffList.map(s => {
-    const days = parseInt($(`days-${s.id}`).value);
-    const travel = parseInt($(`travel-${s.id}`).value) || 0;
-    const color = $(`color-${s.id}`).value;
-    return fetch(`/api/staff/${s.id}`, {
+    const days = parseInt(document.getElementById('days-' + s.id).value) || 0;
+    const travel = parseInt(document.getElementById('travel-' + s.id).value) || 0;
+    const color = document.getElementById('color-' + s.id).value;
+    return fetch('/api/staff/' + s.id, {
       method: 'PUT',
       headers: {'Content-Type':'application/json'},
       body: JSON.stringify({ vacation_days: days, travel_days: travel, color })
