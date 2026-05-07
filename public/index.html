@@ -233,7 +233,7 @@
       <div class="admin-locked" id="admin-locked">
         <p>Enter the admin password to manage staff settings.</p>
         <div style="display:flex;gap:10px;justify-content:center;align-items:center;flex-wrap:wrap;">
-          <input type="password" id="admin-pw" placeholder="Admin password" style="padding:9px 14px;border:1px solid var(--border);border-radius:var(--radius);font-size:0.9rem;background:var(--bg);" onkeydown="if(event.key==='Enter')doAdminLogin()">
+          <input type="password" id="admin-pw" placeholder="Admin password" autocomplete="off" style="padding:9px 14px;border:1px solid var(--border);border-radius:var(--radius);font-size:0.9rem;background:var(--bg);" onkeydown="if(event.key==='Enter')doAdminLogin()">
           <button class="btn btn-primary" style="width:auto;" onclick="doAdminLogin()">Unlock</button>
         </div>
         <div class="error-msg" id="admin-err" style="margin-top:10px;"></div>
@@ -274,14 +274,14 @@
           <div class="form-row" style="align-items:flex-end;gap:16px;flex-wrap:wrap;">
             <div class="form-group" style="flex:1;min-width:200px;">
               <label>App Password (shared by team)</label>
-              <input type="password" id="new-app-pw" placeholder="New password">
+              <input type="password" id="new-app-pw" placeholder="New password" autocomplete="new-password">
             </div>
             <button class="btn btn-ghost" onclick="changePassword('app')">Update</button>
           </div>
           <div class="form-row" style="align-items:flex-end;gap:16px;flex-wrap:wrap;margin-top:8px;">
             <div class="form-group" style="flex:1;min-width:200px;">
               <label>Admin Password</label>
-              <input type="password" id="new-admin-pw" placeholder="New password">
+              <input type="password" id="new-admin-pw" placeholder="New password" autocomplete="new-password">
             </div>
             <button class="btn btn-ghost" onclick="changePassword('admin')">Update</button>
           </div>
