@@ -647,15 +647,22 @@ function countWorkdays(startDate, endDate, category) {
   return count;
 }
 
-function renderList() {
+async function renderList() {
   const el = $('travel-summary');
   if (!allEntries.length) {
     el.innerHTML = `<p style="color:var(--muted);text-align:center;padding:40px;">No entries for ${currentYear}.</p>`;
     return;
   }
 
+  // Fetch summary so we have travel_days allotment + travelUsed per person
+  const summaryData = await fetch(`/api/summary/${currentYear}`).then(r => r.json());
+  const summaryMap = {};
+  summaryData.forEach(s => summaryMap[s.id] = s);
+
   // Build per-person sections
   const html = staffList.map(s => {
+    const sum = summaryMap[s.id] || {};
+    s = { ...s, ...sum }; // merge in travel_days, travelUsed etc
     const personEntries = allEntries.filter(e => e.staff_id === s.id);
     if (!personEntries.length) return '';
 
