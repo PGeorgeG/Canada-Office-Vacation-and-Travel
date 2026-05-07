@@ -51,8 +51,9 @@ app.get('/api/staff', requireAuth, (req, res) => {
 });
 
 app.put('/api/staff/:id', requireAuth, requireAdmin, (req, res) => {
-  const { vacation_days, color } = req.body;
-  run("UPDATE staff SET vacation_days=?,color=? WHERE id=?", [vacation_days, color, req.params.id]);
+  const { vacation_days, travel_days, color } = req.body;
+  run("UPDATE staff SET vacation_days=?,travel_days=?,color=? WHERE id=?",
+    [vacation_days, travel_days || 0, color, req.params.id]);
   res.json({ ok: true });
 });
 
@@ -125,7 +126,8 @@ app.get('/api/summary/:year', requireAuth, (req, res) => {
       breakdown[key] += days;
     });
     const used = breakdown['Vacation'];
-    return { ...s, used, remaining: s.vacation_days - used, breakdown };
+    const travelUsed = breakdown['Travel (work)'];
+    return { ...s, used, remaining: s.vacation_days - used, travelUsed, travelRemaining: (s.travel_days || 0) - travelUsed, breakdown };
   });
 
   res.json(summary);
@@ -264,6 +266,11 @@ app.get('/calendar.ics', (req, res) => {
   res.setHeader('Content-Type', 'text/calendar; charset=utf-8');
   res.setHeader('Content-Disposition', 'inline; filename="pts-ooo.ics"');
   res.send(ical);
+});
+
+// ── Change password page ──────────────────────────────────────────────────────
+app.get('/change-password', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'change-password.html'));
 });
 
 // ── Boot ──────────────────────────────────────────────────────────────────────
