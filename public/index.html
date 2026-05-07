@@ -241,7 +241,13 @@
 
       <div id="admin-panel" class="hidden">
         <div class="admin-section">
-          <h2>Staff Vacation Allotments</h2>
+          <h2>Allotments</h2>
+          <div style="display:grid;grid-template-columns:40px 1fr 1fr 1fr auto;gap:10px;padding:0 0 8px 0;border-bottom:1px solid var(--border);margin-bottom:4px;">
+            <div></div><div></div>
+            <div style="font-size:0.75rem;font-weight:700;text-transform:uppercase;letter-spacing:0.04em;color:var(--muted);">Vacation</div>
+            <div style="font-size:0.75rem;font-weight:700;text-transform:uppercase;letter-spacing:0.04em;color:var(--muted);">Work Travel</div>
+            <div></div>
+          </div>
           <div id="staff-list"></div>
           <div style="margin-top:18px;display:flex;align-items:center;gap:12px;">
             <button class="btn btn-primary" style="width:auto;" onclick="saveAllStaff()">Save All</button>
@@ -508,12 +514,19 @@ async function renderSummary() {
       .filter(([cat]) => s.breakdown[cat] > 0)
       .map(([cat, label]) => `<div class="breakdown-row"><span>${label}</span><span>${s.breakdown[cat]}d</span></div>`)
       .join('');
+    const travelAllotted = s.travel_days || 0;
+    const travelOver = travelAllotted > 0 && s.travelUsed > travelAllotted;
+    const travelPct = travelAllotted > 0 ? Math.min(100, Math.round((s.travelUsed / travelAllotted) * 100)) : 0;
+    const travelBar = travelAllotted > 0 ? `
+      <div class="label" style="margin-top:10px;">${s.travelUsed} of ${travelAllotted} travel days used</div>
+      <div class="bar-track"><div class="bar-fill" style="width:${travelPct}%;background:${catShade(s.color,'Travel (work)')}"></div></div>` : '';
     return `
       <div class="summary-card">
         <div class="name" style="color:${s.color}">${s.name}</div>
-        <div class="days" style="color:${overUsed ? 'var(--danger)' : 'var(--text)'}">${s.remaining}<span style="font-size:0.9rem;font-weight:400;color:var(--muted)"> left</span></div>
+        <div class="days" style="color:${overUsed ? 'var(--danger)' : 'var(--text)'}">${s.remaining}<span style="font-size:0.9rem;font-weight:400;color:var(--muted)"> vacation left</span></div>
         <div class="label">${s.used} of ${s.vacation_days} vacation days used</div>
         <div class="bar-track"><div class="bar-fill" style="width:${pct}%;background:${s.color}"></div></div>
+        ${travelBar}
         ${breakdownHtml ? `<div class="breakdown">${breakdownHtml}</div>` : ''}
       </div>`;
   }).join('');
@@ -849,7 +862,10 @@ function renderStaffAdmin() {
       </div>
       <div class="staff-name">${s.name}</div>
       <div class="form-group" style="margin:0;">
-        <input type="number" id="days-${s.id}" value="${s.vacation_days}" min="0" max="365" step="1">
+        <input type="number" id="days-${s.id}" value="${s.vacation_days}" min="0" max="365" step="1" title="Vacation days">
+      </div>
+      <div class="form-group" style="margin:0;">
+        <input type="number" id="travel-${s.id}" value="${s.travel_days || 0}" min="0" max="999" step="1" title="Work travel days">
       </div>
       <div style="display:flex;align-items:center;gap:8px;flex-shrink:0;">
         <button onclick="copyIcalUrl('${url}', this)" style="background:none;border:none;cursor:pointer;padding:0;color:var(--accent);font-size:0.82rem;text-decoration:underline;" title="${url}">Link for Calendar</button>
@@ -870,11 +886,12 @@ function copyIcalUrl(url, btn) {
 async function saveAllStaff() {
   const saves = staffList.map(s => {
     const days = parseInt($(`days-${s.id}`).value);
+    const travel = parseInt($(`travel-${s.id}`).value) || 0;
     const color = $(`color-${s.id}`).value;
     return fetch(`/api/staff/${s.id}`, {
       method: 'PUT',
       headers: {'Content-Type':'application/json'},
-      body: JSON.stringify({ vacation_days: days, color })
+      body: JSON.stringify({ vacation_days: days, travel_days: travel, color })
     });
   });
   const results = await Promise.all(saves);
