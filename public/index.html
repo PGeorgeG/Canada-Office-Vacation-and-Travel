@@ -451,7 +451,7 @@ async function loadAll() {
   holidays.forEach(h => holidayMap[h.date] = h.name);
   renderCalendar();
   renderSummary();
-  renderList();
+  await renderList();
   populateStaffSelect();
 }
 
@@ -459,7 +459,7 @@ async function reloadEntries() {
   allEntries = await fetch(`/api/entries?year=${currentYear}`).then(r => r.json());
   renderCalendar();
   renderSummary();
-  renderList();
+  await renderList();
 }
 
 // ── Tabs ──────────────────────────────────────────────────────────────────────
@@ -727,9 +727,9 @@ function toggleSummary(uid, header) {
   chevron.textContent = isHidden ? '▼' : '▶';
 }
 
-function setFilter(id) {
+async function setFilter(id) {
   listFilter = id;
-  renderList();
+  await renderList();
 }
 
 // ── Entry modal ───────────────────────────────────────────────────────────────
