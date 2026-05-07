@@ -271,26 +271,8 @@
         </div>
         <div class="admin-section">
           <h2>Change Passwords</h2>
-          <input type="text" name="fake-user" style="display:none;" autocomplete="username">
-          <div class="form-row" style="align-items:flex-end;gap:16px;flex-wrap:wrap;">
-            <div class="form-group" style="flex:1;min-width:200px;">
-              <label>App Password (shared by team)</label>
-              <input type="text" id="new-app-pw" placeholder="New password"
-                autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"
-                style="-webkit-text-security:disc;">
-            </div>
-            <button class="btn btn-ghost" onclick="changePassword('app')">Update</button>
-          </div>
-          <div class="form-row" style="align-items:flex-end;gap:16px;flex-wrap:wrap;margin-top:8px;">
-            <div class="form-group" style="flex:1;min-width:200px;">
-              <label>Admin Password</label>
-              <input type="text" id="new-admin-pw" placeholder="New password"
-                autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"
-                style="-webkit-text-security:disc;">
-            </div>
-            <button class="btn btn-ghost" onclick="changePassword('admin')">Update</button>
-          </div>
-          <div class="error-msg" id="pw-msg" style="color:var(--accent);"></div>
+          <p style="font-size:0.85rem;color:var(--muted);margin-bottom:12px;">Manage app and admin passwords on a separate page to keep things tidy.</p>
+          <a href="/change-password" target="_blank" class="btn btn-ghost" style="width:auto;display:inline-flex;">Open Password Settings ↗</a>
         </div>
       </div></div>
   </main>
@@ -1019,17 +1001,7 @@ async function renderHolidaysTab() {
   }).join('');
 }
 
-async function changePassword(type) {
-  const val = type === 'app' ? $('new-app-pw').value : $('new-admin-pw').value;
-  const r = await fetch('/api/admin/change-password', {
-    method: 'POST',
-    headers: {'Content-Type':'application/json'},
-    body: JSON.stringify({ type, newPassword: val })
-  });
-  const msg = $('pw-msg');
-  if (r.ok) { msg.textContent = 'Password updated.'; setTimeout(() => msg.textContent = '', 3000); }
-  else { msg.style.color = 'var(--danger)'; msg.textContent = 'Failed. Password must be at least 4 characters.'; }
-}
+// changePassword moved to /change-password page
 
 // ── Close modal on overlay click ──────────────────────────────────────────────
 $('entry-modal').addEventListener('click', e => { if (e.target === $('entry-modal')) closeModal(); });
