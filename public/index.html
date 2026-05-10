@@ -369,6 +369,13 @@ function catAbbr(cat) {
   return map[cat] || 'othr';
 }
 
+const STAFF_INITIALS = {
+  'Phil':'PG', 'Dave':'DL', 'Deb':'DP', 'Rachelle':'RM', 'Trudy':'TH'
+};
+function staffInitials(name) {
+  return STAFF_INITIALS[name] || name.slice(0,2).toUpperCase();
+}
+
 // Blend hex colour toward white by a given amount (0 = original, 1 = white)
 function blendToWhite(hex, amount) {
   const r = parseInt(hex.slice(1,3), 16);
@@ -582,7 +589,7 @@ function renderCalendar() {
           ? `background:${shade};color:${textColor};opacity:0.4;`
           : `background:${shade};color:${textColor};`;
         return `<span class="entry-chip" style="${chipStyle}"
-          onclick="editEntry(${e.id});event.stopPropagation()" title="${e.staff_name}: ${e.category}${isNonWorkday ? ' (non-workday)' : ''}">${e.staff_name}: ${catAbbr(e.category)}</span>`;
+          onclick="editEntry(${e.id});event.stopPropagation()" title="${e.staff_name}: ${e.category}${isNonWorkday ? ' (non-workday)' : ''}">${staffInitials(e.staff_name)} ${catAbbr(e.category)}</span>`;
       }).join('');
 
       if (holidayName) cls += ' stat-holiday';
