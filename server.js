@@ -268,6 +268,37 @@ app.get('/calendar.ics', (req, res) => {
   res.send(ical);
 });
 
+// ── CSV Export ───────────────────────────────────────────────────────────────
+app.get('/api/export/csv', requireAuth, (req, res) => {
+  const entries = getAll(`
+    SELECT e.*, s.name as staff_name
+    FROM entries e JOIN staff s ON e.staff_id = s.id
+    ORDER BY s.name, e.start_date
+  `);
+
+  const escape = v => `"${String(v || '').replace(/"/g, '""')}"`;
+
+  const rows = [
+    ['Name', 'Category', 'Detail', 'Start Date', 'End Date', 'Notes'].map(escape).join(',')
+  ];
+
+  entries.forEach(e => {
+    const label = e.category === 'Other' && e.other_label ? e.other_label : '';
+    rows.push([
+      e.staff_name,
+      e.category,
+      label,
+      e.start_date,
+      e.end_date,
+      e.notes || ''
+    ].map(escape).join(','));
+  });
+
+  res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+  res.setHeader('Content-Disposition', 'attachment; filename="pts-ooo-export.csv"');
+  res.send(rows.join('\r\n'));
+});
+
 // ── Change password page ──────────────────────────────────────────────────────
 app.get('/change-password', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'change-password.html'));
