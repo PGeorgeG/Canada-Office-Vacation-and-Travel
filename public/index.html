@@ -270,6 +270,11 @@
           <div id="holiday-admin-list" style="margin-top:20px;"></div>
         </div>
         <div class="admin-section">
+          <h2>Export Data</h2>
+          <p style="font-size:0.85rem;color:var(--muted);margin-bottom:12px;">Download all entries as a CSV file — opens in Excel or Numbers.</p>
+          <a href="/api/export/csv" class="btn btn-ghost" style="width:auto;display:inline-flex;">⬇ Download CSV</a>
+        </div>
+        <div class="admin-section">
           <h2>Change Passwords</h2>
           <p style="font-size:0.85rem;color:var(--muted);margin-bottom:12px;">Manage app and admin passwords on a separate page to keep things tidy.</p>
           <a href="/change-password" target="_blank" class="btn btn-ghost" style="width:auto;display:inline-flex;">Open Password Settings ↗</a>
@@ -362,11 +367,11 @@ function catEmoji(cat) {
 
 function catAbbr(cat) {
   const map = {
-    'Vacation':'vacn', 'Lieu Day':'lieu',
-    'Conference / Training':'conf', 'Travel (work)':'trvl',
-    'Sick Day':'sick', 'Other':'othr'
+    'Vacation':'vac', 'Lieu Day':'liu',
+    'Conference / Training':'con', 'Travel (work)':'tvl',
+    'Sick Day':'sck', 'Other':'oth'
   };
-  return map[cat] || 'othr';
+  return map[cat] || 'oth';
 }
 
 const STAFF_INITIALS = {
