@@ -445,7 +445,8 @@ async function doAdminLogin() {
 }
 
 async function showAdminPanel() {
-  $('admin-locked').classList.add('hidden');
+  const locked = $('admin-locked');
+  if (locked) locked.parentNode.removeChild(locked); // remove from DOM so Chrome ignores the password field
   $('admin-panel').classList.remove('hidden');
   await loadAll();
   renderStaffAdmin();
