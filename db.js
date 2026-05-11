@@ -4,6 +4,7 @@ const path = require('path');
 const bcrypt = require('bcryptjs');
 
 const DB_PATH = process.env.DB_PATH || path.join(__dirname, 'data', 'planner.db');
+console.log('[DB] Using database at:', DB_PATH);
 const dataDir = path.dirname(DB_PATH);
 if (!fs.existsSync(dataDir)) fs.mkdirSync(dataDir, { recursive: true });
 
@@ -28,6 +29,7 @@ async function initDb() {
       name TEXT NOT NULL UNIQUE,
       color TEXT NOT NULL,
       vacation_days INTEGER NOT NULL DEFAULT 10,
+      travel_days INTEGER NOT NULL DEFAULT 0,
       active INTEGER NOT NULL DEFAULT 1
     );
     CREATE TABLE IF NOT EXISTS entries (
@@ -47,6 +49,9 @@ async function initDb() {
       group_id TEXT NOT NULL
     );
   `);
+
+  // Migrate: add travel_days column if it doesn't exist yet
+  try { db.run("ALTER TABLE staff ADD COLUMN travel_days INTEGER NOT NULL DEFAULT 0"); } catch(e) { /* already exists */ }
 
   if (!getOne("SELECT value FROM settings WHERE key='app_password'")) {
     run("INSERT INTO settings(key,value) VALUES('app_password',?)", [bcrypt.hashSync('pts2026', 10)]);
