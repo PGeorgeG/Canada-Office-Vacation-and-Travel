@@ -463,7 +463,7 @@ async function loadAll() {
   holidayMap = {};
   holidays.forEach(h => holidayMap[h.date] = h.name);
   renderCalendar();
-  renderSummary();
+  await renderSummary();
   await renderList();
   populateStaffSelect();
 }
@@ -471,7 +471,7 @@ async function loadAll() {
 async function reloadEntries() {
   allEntries = await fetch(`/api/entries?year=${currentYear}`).then(r => r.json());
   renderCalendar();
-  renderSummary();
+  await renderSummary();
   await renderList();
 }
 
