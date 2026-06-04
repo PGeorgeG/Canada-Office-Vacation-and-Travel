@@ -247,6 +247,32 @@
             <button class="btn btn-primary" style="width:auto;" onclick="saveAllStaff()">Save All</button>
             <span id="staff-save-msg" style="font-size:0.82rem;color:var(--accent);"></span>
           </div>
+
+          <div style="margin-top:24px;padding-top:20px;border-top:1px solid var(--border);">
+            <h3 style="font-size:0.9rem;font-weight:700;margin-bottom:14px;">Add Employee</h3>
+            <div style="display:flex;align-items:flex-end;gap:10px;flex-wrap:wrap;">
+              <div class="form-group" style="margin:0;flex:1;min-width:120px;">
+                <label>Name</label>
+                <input type="text" id="new-staff-name" placeholder="Full name" autocomplete="off">
+              </div>
+              <div class="form-group" style="margin:0;">
+                <label>Colour</label>
+                <div style="width:42px;height:38px;border-radius:var(--radius);border:1px solid var(--border);overflow:hidden;">
+                  <input type="color" id="new-staff-color" value="#4f86c6" style="width:58px;height:54px;margin:-8px;border:none;cursor:pointer;">
+                </div>
+              </div>
+              <div class="form-group" style="margin:0;width:80px;">
+                <label>Vacation</label>
+                <input type="number" id="new-staff-vacation" value="10" min="0" max="365" style="width:80px;">
+              </div>
+              <div class="form-group" style="margin:0;width:90px;">
+                <label>Work Travel</label>
+                <input type="number" id="new-staff-travel" value="0" min="0" max="999" style="width:90px;">
+              </div>
+              <button class="btn btn-primary" style="width:auto;align-self:flex-end;" onclick="addStaff()">Add</button>
+            </div>
+            <div class="error-msg" id="new-staff-err" style="margin-top:8px;"></div>
+          </div>
         </div>
         <div class="admin-section">
           <h2>Statutory Holidays</h2>
@@ -378,7 +404,10 @@ const STAFF_INITIALS = {
   'Phil':'PG', 'Dave':'DL', 'Deb':'DP', 'Rachelle':'RM', 'Trudy':'TH'
 };
 function staffInitials(name) {
-  return STAFF_INITIALS[name] || name.slice(0,2).toUpperCase();
+  if (STAFF_INITIALS[name]) return STAFF_INITIALS[name];
+  const parts = name.trim().split(/\s+/);
+  if (parts.length >= 2) return (parts[0][0] + parts[parts.length-1][0]).toUpperCase();
+  return parts[0].slice(0,2).toUpperCase();
 }
 
 // Blend hex colour toward white by a given amount (0 = original, 1 = white)
@@ -884,6 +913,31 @@ function copyIcalUrl(url, btn) {
     msg.style.opacity = '1';
     setTimeout(() => msg.style.opacity = '0', 2000);
   });
+}
+
+async function addStaff() {
+  const name = $('new-staff-name').value.trim();
+  const color = $('new-staff-color').value;
+  const vacation_days = parseInt($('new-staff-vacation').value) || 10;
+  const travel_days = parseInt($('new-staff-travel').value) || 0;
+  const err = $('new-staff-err');
+  err.textContent = '';
+  if (!name) { err.textContent = 'Please enter a name.'; return; }
+  const r = await fetch('/api/staff', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ name, color, vacation_days, travel_days })
+  });
+  const data = await r.json();
+  if (r.ok) {
+    $('new-staff-name').value = '';
+    $('new-staff-vacation').value = '10';
+    $('new-staff-travel').value = '0';
+    await loadAll();
+    renderStaffAdmin();
+  } else {
+    err.textContent = data.error || 'Failed to add employee.';
+  }
 }
 
 async function saveAllStaff() {
