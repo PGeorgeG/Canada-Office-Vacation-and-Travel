@@ -50,6 +50,18 @@ app.get('/api/staff', requireAuth, (req, res) => {
   res.json(getAll("SELECT * FROM staff WHERE active=1 ORDER BY id"));
 });
 
+app.post('/api/staff', requireAuth, requireAdmin, (req, res) => {
+  const { name, color, vacation_days, travel_days } = req.body;
+  if (!name || !name.trim()) return res.status(400).json({ error: 'Name is required' });
+  const existing = getOne("SELECT id FROM staff WHERE name=?", [name.trim()]);
+  if (existing) return res.status(400).json({ error: 'A staff member with that name already exists' });
+  const result = run(
+    "INSERT INTO staff (name, color, vacation_days, travel_days, active) VALUES (?,?,?,?,1)",
+    [name.trim(), color || '#4f86c6', vacation_days || 10, travel_days || 0]
+  );
+  res.json({ ok: true, id: result.lastInsertRowid });
+});
+
 app.put('/api/staff/:id', requireAuth, requireAdmin, (req, res) => {
   const { vacation_days, travel_days, color } = req.body;
   run("UPDATE staff SET vacation_days=?,travel_days=?,color=? WHERE id=?",
